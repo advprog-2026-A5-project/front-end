@@ -1,0 +1,125 @@
+services:
+  auth-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AUTH_DB_NAME}
+      POSTGRES_USER: ${AUTH_DB_USER}
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD}
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_DB_USER} -d ${AUTH_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kebun-db:
+    image: postgis/postgis:16-3.4
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${KEBUN_DB_NAME}
+      POSTGRES_USER: ${KEBUN_DB_USER}
+      POSTGRES_PASSWORD: ${KEBUN_DB_PASSWORD}
+    volumes:
+      - kebun_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KEBUN_DB_USER} -d ${KEBUN_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hasil-panen-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${HASIL_PANEN_DB_NAME}
+      POSTGRES_USER: ${HASIL_PANEN_DB_USER}
+      POSTGRES_PASSWORD: ${HASIL_PANEN_DB_PASSWORD}
+    volumes:
+      - hasil_panen_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${HASIL_PANEN_DB_USER} -d ${HASIL_PANEN_DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  auth-service:
+    build:
+      context: ../be-management-autentikasi
+    restart: unless-stopped
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/${AUTH_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${AUTH_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    ports:
+      - "8080:8080"
+
+  kebun-service:
+    build:
+      context: ../be-managemen-kebun
+    restart: unless-stopped
+    depends_on:
+      kebun-db:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 8080
+      DB_URL: jdbc:postgresql://kebun-db:5432/${KEBUN_DB_NAME}
+      DB_USERNAME: ${KEBUN_DB_USER}
+      DB_PASSWORD: ${KEBUN_DB_PASSWORD}
+    ports:
+      - "8081:8080"
+
+  hasil-panen-service:
+    build:
+      context: ../be-management-hasil-panen
+    restart: unless-stopped
+    depends_on:
+      hasil-panen-db:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      kebun-service:
+        condition: service_started
+    environment:
+      SERVER_PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://hasil-panen-db:5432/${HASIL_PANEN_DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${HASIL_PANEN_DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${HASIL_PANEN_DB_PASSWORD}
+      SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
+      SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
+      AUTH_SERVICE_BASE_URL: http://auth-service:8080
+      KEBUN_SERVICE_BASE_URL: http://kebun-service:8080
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION: ${JWT_EXPIRATION}
+    ports:
+      - "8082:8080"
+
+  frontend:
+    build:
+      context: ../front-end
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_started
+      kebun-service:
+        condition: service_started
+      hasil-panen-service:
+        condition: service_started
+    environment:
+      NEXT_PUBLIC_AUTH_API_BASE_URL: ${NEXT_PUBLIC_AUTH_API_BASE_URL}
+      NEXT_PUBLIC_KEBUN_API_BASE_URL: ${NEXT_PUBLIC_KEBUN_API_BASE_URL}
+      NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL: ${NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL}
+    ports:
+      - "3000:3000"
+
+volumes:
+  auth_db_data:
+  kebun_db_data:
+  hasil_panen_db_data:

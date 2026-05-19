@@ -1,0 +1,59 @@
+services:
+  auth-db:
+    image: postgres:16
+    container_name: mysawit-auth-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  kebun-db:
+    image: postgis/postgis:16-3.4
+    container_name: mysawit-kebun-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: kebun_db
+      POSTGRES_USER: kebun_user
+      POSTGRES_PASSWORD: kebun_pass
+    ports:
+      - "55432:5432"
+    volumes:
+      - kebun_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kebun_user -d kebun_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  hasil-panen-db:
+    image: postgres:16
+    container_name: mysawit-hasil-panen-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: hasil_panen_db
+      POSTGRES_USER: hasil_panen_user
+      POSTGRES_PASSWORD: hasil_panen_pass
+    ports:
+      - "5434:5432"
+    volumes:
+      - hasil_panen_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hasil_panen_user -d hasil_panen_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  auth_db_data:
+  kebun_db_data:
+  hasil_panen_db_data:
