@@ -1,31 +1,44 @@
 "use client";
 
-import { authApi } from "@/api/authApi";
 import { kebunApi } from "@/api/kebunApi";
 import { AuthGuard } from "@/components/AuthGuard";
-import { useAuth } from "@/auth/AuthContext";
-import type { Kebun } from "@/types/kebun";
+import type { CoordinatePoint, Kebun } from "@/types/kebun";
 import { useEffect, useMemo, useState } from "react";
 
-const emptyKebun: Kebun = {
-  kode: "",
-  nama: "",
+interface KebunForm {
+  code: string;
+  name: string;
+  luas: number;
+  coordinates: CoordinatePoint[];
+}
+
+const emptyKebunForm: KebunForm = {
+  code: "",
+  name: "",
   luas: 0,
-  titik1: { x: 0, y: 0 },
-  titik2: { x: 0, y: 0 },
-  titik3: { x: 0, y: 0 },
-  titik4: { x: 0, y: 0 },
-  mandorId: null,
+  coordinates: [
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+    { x: 0, y: 0 },
+  ],
+};
+
+const normalizeCoordinates = (coordinates: CoordinatePoint[] | undefined): CoordinatePoint[] => {
+  const source = coordinates ?? [];
+  const normalized = source.slice(0, 4);
+  while (normalized.length < 4) {
+    normalized.push({ x: 0, y: 0 });
+  }
+  return normalized;
 };
 
 export default function AdminKebunPage() {
-  const { token } = useAuth();
   const [kebunList, setKebunList] = useState<Kebun[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState<Kebun>(emptyKebun);
+  const [form, setForm] = useState<KebunForm>(emptyKebunForm);
   const [editingCode, setEditingCode] = useState<string | null>(null);
-  const [mandors, setMandors] = useState<Array<{ id: number; nama: string }>>([]);
 
   const title = useMemo(() => (editingCode ? `Edit Kebun ${editingCode}` : "Create Kebun"), [editingCode]);
 
@@ -33,12 +46,8 @@ export default function AdminKebunPage() {
     setLoading(true);
     setError(null);
     try {
-      const [kebunData, userData] = await Promise.all([
-        kebunApi.list(),
-        token ? authApi.users(token) : Promise.resolve([]),
-      ]);
+      const kebunData = await kebunApi.list();
       setKebunList(kebunData);
-      setMandors(userData.filter((u) => u.role === "MANDOR").map((u) => ({ id: u.id, nama: u.nama })));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load kebun data");
     } finally {
@@ -48,27 +57,80 @@ export default function AdminKebunPage() {
 
   useEffect(() => {
     void loadData();
-  }, [token]);
+  }, []);
+
+  const setCoordinate = (index: number, key: "x" | "y", value: string) => {
+    setForm((prev) => {
+      const next = prev.coordinates.map((point, i) =>
+        i === index ? { ...point, [key]: Number(value) } : point,
+      );
+      return { ...prev, coordinates: next };
+    });
+  };
+
+  const validateForm = (): string | null => {
+    if (form.coordinates.length !== 4) {
+      return "Exactly 4 coordinate points are required.";
+    }
+
+    for (let i = 0; i < form.coordinates.length; i++) {
+      const point = form.coordinates[i];
+      if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+        return `Point ${i + 1} must have numeric x and y values.`;
+      }
+    }
+
+    const uniq = new Set(form.coordinates.map((p) => `${p.x},${p.y}`));
+    if (uniq.size < 4) {
+      return "Each coordinate point must be unique.";
+    }
+
+    return null;
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setError(null);
+    const validationError = validateForm();
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
     try {
+      const payload: Kebun = {
+        code: form.code.trim(),
+        name: form.name.trim(),
+        luas: Number(form.luas),
+        coordinates: form.coordinates,
+      };
+
       if (editingCode) {
-        await kebunApi.update(editingCode, form);
+        await kebunApi.update(editingCode, payload);
       } else {
-        await kebunApi.create(form);
+        await kebunApi.create(payload);
       }
-      setForm(emptyKebun);
+      setForm(emptyKebunForm);
       setEditingCode(null);
       await loadData();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Submit failed");
+      const message = e instanceof Error ? e.message : "Submit failed";
+      if (message.toLowerCase().includes("overlap")) {
+        setError(`Area kebun overlap dengan kebun lain. ${message}`);
+        return;
+      }
+      setError(message);
     }
   };
 
   const onEdit = (kebun: Kebun) => {
-    setForm(kebun);
-    setEditingCode(kebun.kode);
+    setForm({
+      code: kebun.code,
+      name: kebun.name,
+      luas: kebun.luas,
+      coordinates: normalizeCoordinates(kebun.coordinates),
+    });
+    setEditingCode(kebun.code);
   };
 
   const onDelete = async (code: string) => {
@@ -89,13 +151,35 @@ export default function AdminKebunPage() {
 
         <form className="grid grid-cols-1 gap-2 rounded border p-3 md:grid-cols-2" onSubmit={submit}>
           <h3 className="md:col-span-2 text-sm font-semibold">{title}</h3>
-          <input className="rounded border p-2" placeholder="Kode Kebun" value={form.kode} onChange={(e) => setForm({ ...form, kode: e.target.value })} disabled={!!editingCode} required />
-          <input className="rounded border p-2" placeholder="Nama Kebun" value={form.nama} onChange={(e) => setForm({ ...form, nama: e.target.value })} required />
+          <input className="rounded border p-2" placeholder="Kode Kebun" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} disabled={!!editingCode} required />
+          <input className="rounded border p-2" placeholder="Nama Kebun" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
           <input className="rounded border p-2" placeholder="Luas (hektare)" type="number" value={form.luas} onChange={(e) => setForm({ ...form, luas: Number(e.target.value) })} required />
-          <select className="rounded border p-2" value={form.mandorId ?? ""} onChange={(e) => setForm({ ...form, mandorId: e.target.value ? Number(e.target.value) : null })}>
-            <option value="">No Mandor</option>
-            {mandors.map((m) => <option key={m.id} value={m.id}>{m.nama} ({m.id})</option>)}
-          </select>
+          <div className="md:col-span-2 grid grid-cols-1 gap-2 md:grid-cols-2">
+            {form.coordinates.map((point, index) => (
+              <div key={index} className="grid grid-cols-2 gap-2 rounded border p-2">
+                <input
+                  className="rounded border p-2"
+                  type="number"
+                  step="any"
+                  placeholder={`Point ${index + 1} x coordinate`}
+                  aria-label={`Point ${index + 1} x coordinate`}
+                  value={point.x}
+                  onChange={(e) => setCoordinate(index, "x", e.target.value)}
+                  required
+                />
+                <input
+                  className="rounded border p-2"
+                  type="number"
+                  step="any"
+                  placeholder={`Point ${index + 1} y coordinate`}
+                  aria-label={`Point ${index + 1} y coordinate`}
+                  value={point.y}
+                  onChange={(e) => setCoordinate(index, "y", e.target.value)}
+                  required
+                />
+              </div>
+            ))}
+          </div>
           <button className="md:col-span-2 rounded bg-green-700 px-3 py-2 text-white" type="submit">{editingCode ? "Update Kebun" : "Create Kebun"}</button>
         </form>
 
@@ -104,16 +188,16 @@ export default function AdminKebunPage() {
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <th className="p-2 text-left">Kode</th><th className="p-2 text-left">Nama</th><th className="p-2 text-left">Luas</th><th className="p-2 text-left">Mandor</th><th className="p-2 text-left">Actions</th>
+                  <th className="p-2 text-left">Code</th><th className="p-2 text-left">Name</th><th className="p-2 text-left">Luas</th><th className="p-2 text-left">Coordinates (4 points)</th><th className="p-2 text-left">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {kebunList.map((k) => (
-                  <tr key={k.kode} className="border-t">
-                    <td className="p-2">{k.kode}</td><td className="p-2">{k.nama}</td><td className="p-2">{k.luas}</td><td className="p-2">{k.mandorId ?? "-"}</td>
+                  <tr key={k.code} className="border-t">
+                    <td className="p-2">{k.code}</td><td className="p-2">{k.name}</td><td className="p-2">{k.luas}</td><td className="p-2">{k.coordinates.map((p, i) => `P${i + 1}(${p.x}, ${p.y})`).join(" | ")}</td>
                     <td className="p-2 space-x-2">
                       <button className="rounded bg-amber-600 px-2 py-1 text-white" onClick={() => onEdit(k)}>Edit</button>
-                      <button className="rounded bg-red-600 px-2 py-1 text-white" onClick={() => onDelete(k.kode)}>Delete</button>
+                      <button className="rounded bg-red-600 px-2 py-1 text-white" onClick={() => onDelete(k.code)}>Delete</button>
                     </td>
                   </tr>
                 ))}

@@ -4,14 +4,10 @@ export interface CoordinatePoint {
 }
 
 export interface Kebun {
-  kode: string;
-  nama: string;
+  code: string;
+  name: string;
   luas: number;
-  titik1: CoordinatePoint;
-  titik2: CoordinatePoint;
-  titik3: CoordinatePoint;
-  titik4: CoordinatePoint;
-  mandorId?: number | null;
+  coordinates: CoordinatePoint[];
 }
 
 export interface MandorKebunAssignment {
