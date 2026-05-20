@@ -25,5 +25,5 @@ Frontend integration app for:
 - `/admin/users`
 - `/admin/assignments`
 - `/admin/kebun`
-- `/buruh/harvests`
+- `/buruh/harvests`  
 - `/mandor/harvests`
