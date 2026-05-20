@@ -157,10 +157,10 @@ export default function AdminKebunPage() {
   }, []);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = globalThis.setTimeout(() => {
       void loadData();
     }, 0);
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [loadData]);
 
   const setCoordinate = (index: number, key: "x" | "y", value: string) => {

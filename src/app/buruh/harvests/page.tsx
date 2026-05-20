@@ -22,10 +22,10 @@ export default function BuruhHarvestPage() {
   }, [filterStatus, token]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void load();
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
     }, 0);
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [load]);
 
   const submit = async (event: React.FormEvent) => {

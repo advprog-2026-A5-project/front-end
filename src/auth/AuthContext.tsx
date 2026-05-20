@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = globalThis.setTimeout(() => {
       const stored = localStorage.getItem(TOKEN_KEY);
       if (!stored) {
         setLoading(false);
@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         })
         .finally(() => setLoading(false));
     }, 0);
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, []);
 
   const refreshCurrentUser = useCallback(async () => {

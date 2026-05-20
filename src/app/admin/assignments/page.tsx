@@ -22,10 +22,10 @@ export default function AdminAssignmentsPage() {
   }, [token]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void load();
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
     }, 0);
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [load]);
 
   const buruhs = useMemo(() => users.filter((user) => user.role === "BURUH"), [users]);

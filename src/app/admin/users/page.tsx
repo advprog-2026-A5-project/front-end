@@ -31,10 +31,10 @@ export default function AdminUsersPage() {
   }, [token]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      void load();
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
     }, 0);
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [load]);
 
   const createTestUser = async (event: React.FormEvent) => {
