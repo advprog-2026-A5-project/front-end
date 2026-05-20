@@ -16,7 +16,7 @@ FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-COPY --from=builder --chown=node:node /app ./
+COPY --from=builder /app ./
 
 USER node
 
