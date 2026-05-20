@@ -58,18 +58,18 @@ export default function AdminUsersPage() {
   return (
     <AuthGuard roles={["ADMIN"]}>
       <AppShell>
-        <h2 className="text-xl font-semibold">Users</h2>
-        <p className="mt-1 text-sm text-slate-600">Data fetched from Auth service `/api/users`.</p>
-        <form className="mt-4 grid gap-2 rounded border p-3 md:grid-cols-5" onSubmit={createTestUser}>
+        <h2 className="text-xl font-semibold text-slate-100">Users</h2>
+        <p className="mt-1 text-sm text-slate-300">Data fetched from Auth service `/api/users`.</p>
+        <form className="mt-4 grid gap-2 rounded-xl border border-slate-700 bg-slate-950/50 p-3 md:grid-cols-5" onSubmit={createTestUser}>
           <input
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
             placeholder="nama"
             required
             value={form.nama}
             onChange={(e) => setForm((prev) => ({ ...prev, nama: e.target.value }))}
           />
           <input
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
             placeholder="email"
             required
             type="email"
@@ -77,14 +77,14 @@ export default function AdminUsersPage() {
             onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
           />
           <input
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
             placeholder="password"
             required
             value={form.password}
             onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
           />
           <select
-            className="rounded border px-2 py-1 text-sm"
+            className="rounded border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-slate-100"
             value={form.role}
             onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as Role }))}
           >
@@ -92,18 +92,18 @@ export default function AdminUsersPage() {
             <option value="MANDOR">MANDOR</option>
             <option value="SUPIR">SUPIR</option>
           </select>
-          <button className="rounded bg-green-700 px-3 py-1 text-sm text-white" type="submit">
+          <button className="rounded bg-emerald-600 px-3 py-1 text-sm font-medium text-white hover:bg-emerald-500" type="submit">
             Create test user
           </button>
         </form>
-        {message && <p className="mt-3 rounded bg-green-50 p-2 text-sm text-green-700">{message}</p>}
-        {error && <p className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {message && <p className="mt-3 rounded border border-emerald-300/20 bg-emerald-500/10 p-2 text-sm text-emerald-200">{message}</p>}
+        {error && <p className="mt-3 rounded border border-red-300/20 bg-red-500/10 p-2 text-sm text-red-200">{error}</p>}
         {loading ? (
-          <p className="mt-4">Loading users...</p>
+          <p className="mt-4 text-slate-300">Loading users...</p>
         ) : (
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full border text-sm">
-              <thead className="bg-slate-100">
+          <div className="mt-4 overflow-x-auto rounded-xl border border-slate-700">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-800 text-slate-200">
                 <tr>
                   <th className="border px-2 py-1">ID</th>
                   <th className="border px-2 py-1">Nama</th>
@@ -114,7 +114,7 @@ export default function AdminUsersPage() {
               </thead>
               <tbody>
                 {users.map((user) => (
-                  <tr key={user.id}>
+                  <tr key={user.id} className="text-slate-100">
                     <td className="border px-2 py-1">{user.id}</td>
                     <td className="border px-2 py-1">{user.nama}</td>
                     <td className="border px-2 py-1">{user.email}</td>

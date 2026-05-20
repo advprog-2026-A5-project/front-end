@@ -27,31 +27,31 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     : [];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b bg-white">
+    <div className="min-h-screen bg-slate-950 text-slate-100">
+      <header className="border-b border-slate-800 bg-slate-900/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-semibold text-green-800">MySawit Frontend Integration</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-emerald-300">MySawit Frontend Integration</h1>
           {currentUser && (
             <div className="text-right text-sm">
-              <p className="font-medium">{currentUser.nama}</p>
-              <p className="text-slate-600">{currentUser.email}</p>
-              <p className="text-slate-500">{roleLabel[currentUser.role] ?? currentUser.role}</p>
+              <p className="font-medium text-slate-100">{currentUser.nama}</p>
+              <p className="text-slate-300">{currentUser.email}</p>
+              <p className="text-slate-400">{roleLabel[currentUser.role] ?? currentUser.role}</p>
             </div>
           )}
         </div>
       </header>
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 p-4 md:grid-cols-[220px_1fr]">
-        <aside className="rounded border bg-white p-3">
+        <aside className="rounded-xl border border-slate-700 bg-slate-900/70 p-3">
           <nav className="space-y-1">
             {navItems.map((item) => (
-              <Link className="block rounded px-2 py-1 text-sm hover:bg-slate-100" key={item.href} href={item.href}>
+              <Link className="block rounded-md px-2 py-1 text-sm text-slate-200 hover:bg-slate-800 hover:text-white" key={item.href} href={item.href}>
                 {item.label}
               </Link>
             ))}
           </nav>
           {currentUser && (
             <button
-              className="mt-4 w-full rounded bg-red-600 px-3 py-2 text-sm text-white hover:bg-red-700"
+              className="mt-4 w-full rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-500"
               onClick={() => logout()}
               type="button"
             >
@@ -59,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </button>
           )}
         </aside>
-        <main className="rounded border bg-white p-4">{children}</main>
+        <main className="rounded-xl border border-slate-700 bg-slate-900/70 p-4">{children}</main>
       </div>
     </div>
   );
