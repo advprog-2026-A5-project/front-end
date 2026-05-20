@@ -3,7 +3,7 @@
 import { kebunApi } from "@/api/kebunApi";
 import { AuthGuard } from "@/components/AuthGuard";
 import type { CoordinatePoint, Kebun } from "@/types/kebun";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 interface PointInput {
   x: string;
@@ -138,7 +138,7 @@ export default function AdminKebunPage() {
     };
   };
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
@@ -154,11 +154,14 @@ export default function AdminKebunPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    void loadData();
-  }, []);
+    const timeoutId = globalThis.setTimeout(() => {
+      void loadData();
+    }, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [loadData]);
 
   const setCoordinate = (index: number, key: "x" | "y", value: string) => {
     setForm((prev) => {

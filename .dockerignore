@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+.github
+.env
+.env.*
+*.pem
+*.key
+coverage
+dist
+build
+docs
+README.md

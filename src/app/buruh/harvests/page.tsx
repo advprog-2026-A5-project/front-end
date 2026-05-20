@@ -4,7 +4,7 @@ import { hasilPanenApi } from "@/api/hasilPanenApi";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useAuth } from "@/auth/AuthContext";
 import type { HarvestStatus, MyHarvestItem } from "@/types/harvest";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function BuruhHarvestPage() {
   const { token } = useAuth();
@@ -15,15 +15,18 @@ export default function BuruhHarvestPage() {
   const [items, setItems] = useState<MyHarvestItem[]>([]);
   const [filterStatus, setFilterStatus] = useState("");
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     const data = await hasilPanenApi.myHarvests(token, { status: filterStatus || undefined });
     setItems(data);
-  };
+  }, [filterStatus, token]);
 
   useEffect(() => {
-    void load();
-  }, [token, filterStatus]);
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
+    }, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [load]);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
