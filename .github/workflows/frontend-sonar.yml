@@ -4,13 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches: ["main", "staging", "develop"]
-    paths:
-      - "front-end/**"
-      - ".github/workflows/frontend-sonar.yml"
   pull_request:
-    paths:
-      - "front-end/**"
-      - ".github/workflows/frontend-sonar.yml"
 
 permissions:
   contents: read
