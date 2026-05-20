@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { paymentApi } from "@/api/paymentApi";
 import type {
   PayrollResponse,
   PayrollStatus,
-  UpahResponse,
   UpahRole,
   WalletResponse,
 } from "@/types/payment";
@@ -28,24 +27,21 @@ const sawitDollarFormat = new Intl.NumberFormat("en-US", {
 });
 
 export default function UpahPage() {
-  const adminId = "1";
-  const [upahList, setUpahList] = useState<UpahResponse[]>([]);
+  const adminId = "100";
   const [draft, setDraft] = useState<Record<UpahRole, string>>({
     BURUH: "",
     MANDOR: "",
     SUPIR: "",
   });
-  const [loadingUpah, setLoadingUpah] = useState(true);
+  const [loadingUpah, setLoadingUpah] = useState(false);
   const [errorUpah, setErrorUpah] = useState<string | null>(null);
   const [savingRole, setSavingRole] = useState<UpahRole | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [payrolls, setPayrolls] = useState<PayrollResponse[]>([]);
   const [loadingPayrolls, setLoadingPayrolls] = useState(false);
   const [errorPayrolls, setErrorPayrolls] = useState<string | null>(null);
   const [payrollActionId, setPayrollActionId] = useState<number | null>(null);
   const [rejectionNote, setRejectionNote] = useState<Record<number, string>>({});
   const [wallet, setWallet] = useState<WalletResponse | null>(null);
-  const [loadingWallet, setLoadingWallet] = useState(false);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [topUpAmount, setTopUpAmount] = useState("");
   const [toppingUp, setToppingUp] = useState(false);
@@ -53,12 +49,11 @@ export default function UpahPage() {
   const adminIdNumber = Number(adminId);
   const adminIdValid = Number.isFinite(adminIdNumber) && adminIdNumber > 0;
 
-  const loadUpah = async () => {
+  const loadUpah = useCallback(async () => {
     setErrorUpah(null);
-    setRefreshing(true);
+    setLoadingUpah(true);
     try {
       const data = await paymentApi.getUpah("ADMIN");
-      setUpahList(data);
       setDraft({
         BURUH: String((data.find((item) => item.role === "BURUH")?.upahPerKg ?? 0) * 10000),
         MANDOR: String((data.find((item) => item.role === "MANDOR")?.upahPerKg ?? 0) * 10000),
@@ -67,12 +62,11 @@ export default function UpahPage() {
     } catch (e) {
       setErrorUpah(e instanceof Error ? e.message : "Failed to load upah");
     } finally {
-      setRefreshing(false);
       setLoadingUpah(false);
     }
-  };
+  }, []);
 
-  const loadPayrolls = async () => {
+  const loadPayrolls = useCallback(async () => {
     if (!adminIdValid) {
       setErrorPayrolls("Admin ID harus berupa angka positif");
       return;
@@ -88,35 +82,34 @@ export default function UpahPage() {
     } finally {
       setLoadingPayrolls(false);
     }
-  };
+  }, [adminIdNumber, adminIdValid]);
 
-  const loadWallet = async () => {
+  const loadWallet = useCallback(async () => {
     if (!adminIdValid) {
       setWalletError("Admin ID harus berupa angka positif");
       return;
     }
     setWalletError(null);
-    setLoadingWallet(true);
     try {
       const data = await paymentApi.getWallet(adminIdNumber);
       setWallet(data);
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : "Failed to load wallet");
-    } finally {
-      setLoadingWallet(false);
     }
-  };
+  }, [adminIdNumber, adminIdValid]);
+
+  const handleRefreshAll = useCallback(() => {
+    void loadUpah();
+    void loadPayrolls();
+    void loadWallet();
+  }, [loadPayrolls, loadUpah, loadWallet]);
 
   useEffect(() => {
-    void loadUpah();
-    void loadPayrolls();
-    void loadWallet();
-  }, []);
-  const handleRefreshAll = () => {
-    void loadUpah();
-    void loadPayrolls();
-    void loadWallet();
-  };
+    const timer = setTimeout(() => {
+      handleRefreshAll();
+    }, 0);
+    return () => clearTimeout(timer);
+  }, [handleRefreshAll]);
 
   const handleChange = (role: UpahRole, value: string) => {
     setDraft((prev) => ({ ...prev, [role]: value }));
@@ -133,10 +126,7 @@ export default function UpahPage() {
     setSavingRole(role);
     try {
       const updated = await paymentApi.updateUpah("ADMIN", { role, upahPerKg: valueSawitDollar });
-      setUpahList((prev) => {
-        const next = prev.filter((item) => item.role !== role);
-        return [...next, updated].sort((a, b) => a.role.localeCompare(b.role));
-      });
+      setDraft((prev) => ({ ...prev, [role]: String(updated.upahPerKg * 10000) }));
     } catch (e) {
       setErrorUpah(e instanceof Error ? e.message : "Failed to update upah");
     } finally {
@@ -229,14 +219,6 @@ export default function UpahPage() {
           <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/85 p-8 shadow-[0_20px_50px_-30px_rgba(47,61,46,0.6)]">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[#2f3d2e]">Upah</h2>
-              {/* <button
-                className="rounded-full border border-[#2f3d2e]/30 px-4 py-2 text-sm font-medium text-[#2f3d2e] transition hover:bg-[#2f3d2e] hover:text-white"
-                type="button"
-                onClick={loadUpah}
-                disabled={refreshing}
-              >
-                {refreshing ? "Memuat..." : "Refresh"}
-              </button> */}
             </div>
 
             {loadingUpah ? (
@@ -287,14 +269,6 @@ export default function UpahPage() {
           <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/85 p-8 shadow-[0_20px_40px_-30px_rgba(47,61,46,0.6)]">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-[#2f3d2e]">Wallet Admin</h2>
-              {/* <button
-                className="rounded-full border border-[#2f3d2e]/30 px-4 py-2 text-sm font-medium text-[#2f3d2e] transition hover:bg-[#2f3d2e] hover:text-white"
-                type="button"
-                onClick={loadWallet}
-                disabled={loadingWallet}
-              >
-                {loadingWallet ? "Memuat..." : "Refresh"}
-              </button> */}
             </div>
 
             <div className="mt-5 rounded-2xl border border-[#2f3d2e]/10 bg-[#fdfbf7] p-5">
@@ -339,14 +313,6 @@ export default function UpahPage() {
           <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/90 p-8 shadow-[0_20px_50px_-30px_rgba(47,61,46,0.6)]">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <h2 className="text-xl font-semibold text-[#2f3d2e]">Payroll</h2>
-              {/* <button
-                className="rounded-full border border-[#2f3d2e]/30 px-4 py-2 text-sm font-medium text-[#2f3d2e] transition hover:bg-[#2f3d2e] hover:text-white"
-                type="button"
-                onClick={loadPayrolls}
-                disabled={loadingPayrolls}
-              >
-                {loadingPayrolls ? "Memuat..." : "Refresh"}
-              </button> */}
             </div>
 
             {loadingPayrolls ? (

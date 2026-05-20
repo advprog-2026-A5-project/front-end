@@ -7,7 +7,7 @@ import type {
   UpahResponse,
   WalletResponse,
 } from "@/types/payment";
-import { env } from "@/config/env";
+// import { env } from "@/config/env";
 import { request } from "./httpClient";
 
 // TODO: ntar ditaro & setup ke env
