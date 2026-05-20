@@ -4,7 +4,7 @@ import { hasilPanenApi } from "@/api/hasilPanenApi";
 import { AuthGuard } from "@/components/AuthGuard";
 import { useAuth } from "@/auth/AuthContext";
 import type { MandorHarvestItem } from "@/types/harvest";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function MandorHarvestPage() {
   const { token } = useAuth();
@@ -13,7 +13,7 @@ export default function MandorHarvestPage() {
   const [buruhName, setBuruhName] = useState("");
   const [eligibility, setEligibility] = useState<Record<string, string>>({});
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     try {
       const data = await hasilPanenApi.mandorHarvests(token, { buruhName: buruhName || undefined });
@@ -21,9 +21,14 @@ export default function MandorHarvestPage() {
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed loading harvests");
     }
-  };
+  }, [buruhName, token]);
 
-  useEffect(() => { void load(); }, [token, buruhName]);
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [load]);
 
   const approve = async (id: string) => {
     if (!token) return;
