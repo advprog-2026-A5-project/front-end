@@ -6,7 +6,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/components/AuthGuard";
 import type { Role, UserModel } from "@/types/auth";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function AdminUsersPage() {
   const { token } = useAuth();
@@ -16,7 +16,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({ email: "", nama: "", password: "pass123", role: "BURUH" as Role });
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     setLoading(true);
     setError(null);
@@ -28,11 +28,14 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [token]);
 
   useEffect(() => {
-    void load();
-  }, [token]);
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
+    }, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [load]);
 
   const createTestUser = async (event: React.FormEvent) => {
     event.preventDefault();

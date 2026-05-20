@@ -5,7 +5,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/components/AuthGuard";
 import type { UserModel } from "@/types/auth";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 export default function AdminAssignmentsPage() {
   const { token } = useAuth();
@@ -15,15 +15,18 @@ export default function AdminAssignmentsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     if (!token) return;
     const data = await authApi.users(token);
     setUsers(data);
-  };
+  }, [token]);
 
   useEffect(() => {
-    void load();
-  }, [token]);
+    const timeoutId = globalThis.setTimeout(() => {
+      load().catch(() => {});
+    }, 0);
+    return () => globalThis.clearTimeout(timeoutId);
+  }, [load]);
 
   const buruhs = useMemo(() => users.filter((user) => user.role === "BURUH"), [users]);
   const mandors = useMemo(() => users.filter((user) => user.role === "MANDOR"), [users]);
