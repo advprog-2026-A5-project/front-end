@@ -11,19 +11,20 @@ const roleLabel: Record<string, string> = {
   SUPIR: "Supir Truk",
 };
 
+function getNavItems(role?: string) {
+  if (role !== "ADMIN") return [];
+  return [
+    { href: "/admin", label: "Home" },
+    { href: "/admin/kebun", label: "Manajemen Kebun" },
+    { href: "/admin/assignments", label: "Assignment Kebun" },
+  ];
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { currentUser, logout } = useAuth();
   const pathname = usePathname();
 
-  const navItems = currentUser
-    ? currentUser.role === "ADMIN"
-      ? [
-          { href: "/admin", label: "Home" },
-          { href: "/admin/kebun", label: "Manajemen Kebun" },
-          { href: "/admin/assignments", label: "Assignment Kebun" },
-        ]
-      : []
-    : [];
+  const navItems = getNavItems(currentUser?.role);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">

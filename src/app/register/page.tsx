@@ -8,6 +8,12 @@ import { useState } from "react";
 
 type PublicRole = Exclude<Role, "ADMIN">;
 
+function getRegisterErrorMessage(error: unknown) {
+  if (error instanceof ApiError) return `${error.status} ${error.message}`;
+  if (error instanceof Error) return error.message;
+  return "Register failed";
+}
+
 export default function RegisterPage() {
   const [form, setForm] = useState({
     nama: "",
@@ -55,8 +61,7 @@ export default function RegisterPage() {
         nomorSertifikasiMandor: "",
       });
     } catch (e) {
-      const msg = e instanceof ApiError ? `${e.status} ${e.message}` : e instanceof Error ? e.message : "Register failed";
-      setError(msg);
+      setError(getRegisterErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
@@ -70,7 +75,7 @@ export default function RegisterPage() {
 
         <div className="grid gap-3 text-sm text-slate-200">
           <label className="block">
-            Nama
+            <span>Nama</span>
             <input
               className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
               required
@@ -79,7 +84,7 @@ export default function RegisterPage() {
             />
           </label>
           <label className="block">
-            Email
+            <span>Email</span>
             <input
               className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
               required
@@ -90,7 +95,7 @@ export default function RegisterPage() {
           </label>
           <div className="grid gap-3 md:grid-cols-2">
             <label className="block">
-              Password
+              <span>Password</span>
               <input
                 className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
                 required
@@ -100,7 +105,7 @@ export default function RegisterPage() {
               />
             </label>
             <label className="block">
-              Konfirmasi Password
+              <span>Konfirmasi Password</span>
               <input
                 className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
                 required
@@ -112,7 +117,7 @@ export default function RegisterPage() {
           </div>
 
           <label className="block">
-            Role
+            <span>Role</span>
             <select
               className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
               value={form.role}
@@ -126,7 +131,7 @@ export default function RegisterPage() {
 
           {form.role === "MANDOR" && (
             <label className="block">
-              Nomor Sertifikasi Mandor
+              <span>Nomor Sertifikasi Mandor</span>
               <input
                 className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
                 required
@@ -146,7 +151,7 @@ export default function RegisterPage() {
         <button
           className="mt-2 w-full rounded-xl border border-slate-500 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800"
           onClick={() => {
-            // TODO(auth): wire Google OAuth registration flow here.
+            // Placeholder: Google OAuth registration is shown until backend support is available.
           }}
           type="button"
         >

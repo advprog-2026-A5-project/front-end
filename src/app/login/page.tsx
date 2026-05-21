@@ -56,7 +56,7 @@ export default function LoginPage() {
         <button
           className="mt-2 w-full rounded-xl border border-slate-500 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800"
           onClick={() => {
-            // TODO(auth): wire Google OAuth login flow here.
+            // Placeholder: Google OAuth login flow is shown for future backend integration.
           }}
           type="button"
         >

@@ -11,8 +11,6 @@ jest.mock("@/auth/AuthContext", () => ({
   useAuth: () => ({ token: "token-test" }),
 }));
 
-const mockUsers = [{ id: 1, nama: "Mandor 1", email: "mandor@example.com", role: "MANDOR" as const }];
-
 const mockKebunList = [
   { code: "KBN001", name: "Kebun Satu", luas: 12, coordinates: [] },
   { code: "KBN002", name: "Kebun Dua", luas: 14, coordinates: [] },
@@ -79,7 +77,7 @@ describe("AdminKebunPage delete flow", () => {
   });
 
   it("uses custom delete modal instead of window.confirm", async () => {
-    const confirmSpy = jest.spyOn(window, "confirm");
+    const confirmSpy = jest.spyOn(globalThis, "confirm");
     render(<AdminKebunPage />);
     const user = userEvent.setup();
 

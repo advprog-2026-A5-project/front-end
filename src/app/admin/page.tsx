@@ -87,12 +87,12 @@ function FeatureCard({
   description,
   ctaLabel,
   href,
-}: {
+}: Readonly<{
   title: string;
   description: string;
   ctaLabel: string;
   href: string;
-}) {
+}>) {
   return (
     <article className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
       <h3 className="text-xl font-semibold text-slate-100">{title}</h3>
@@ -107,7 +107,7 @@ function FeatureCard({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
+function SummaryCard({ label, value }: Readonly<{ label: string; value: number }>) {
   return (
     <article className="rounded-2xl border border-slate-700 bg-slate-900/80 p-4">
       <p className="text-sm text-slate-400">{label}</p>
