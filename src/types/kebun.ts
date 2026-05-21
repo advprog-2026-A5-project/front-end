@@ -10,6 +10,11 @@ export interface Kebun {
   coordinates: CoordinatePoint[];
 }
 
+export interface KebunDetail extends Kebun {
+  mandorId: string | null;
+  supirIds: string[];
+}
+
 export interface MandorKebunAssignment {
   mandorId: number;
   kebunId: string | null;
