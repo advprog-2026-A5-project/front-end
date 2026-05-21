@@ -353,13 +353,16 @@ export default function AdminKebunPage() {
     setIsDeleteSubmitting(true);
     try {
       await kebunApi.remove(code);
+      setKebunList((prev) => prev.filter((item) => item.code !== code));
+      if (selectedKebunOnMap === code) {
+        setSelectedKebunOnMap(null);
+      }
       if (selectedCode === code) {
         setSelectedCode(null);
         setDetail(null);
       }
       setSuccess(`Kebun ${code} berhasil dihapus.`);
       setDeleteTarget(null);
-      await loadData();
     } catch (e) {
       const fallback = "Gagal menghapus kebun. Silakan coba lagi.";
       const reason = e instanceof Error && e.message ? e.message : "";
