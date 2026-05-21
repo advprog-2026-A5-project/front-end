@@ -127,6 +127,13 @@ const pointToCanvas = (point: CoordinatePoint, bounds: MapBounds) => {
 
 const formatPoint = (point: CoordinatePoint) => `(${point.x}, ${point.y})`;
 
+const getDisplayErrorMessage = (error: unknown, fallback: string): string => {
+  if (error instanceof Error && error.message.trim()) {
+    return error.message;
+  }
+  return fallback;
+};
+
 export default function AdminKebunPage() {
   const { token } = useAuth();
   const [kebunList, setKebunList] = useState<Kebun[]>([]);
@@ -382,7 +389,7 @@ export default function AdminKebunPage() {
       setSuccess("Mandor berhasil ditugaskan ke kebun ini.");
       await loadDetail();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Assign mandor failed");
+      setError(getDisplayErrorMessage(e, "Gagal assign mandor."));
     }
   };
 
@@ -397,7 +404,7 @@ export default function AdminKebunPage() {
       await loadData();
       await loadDetail();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reassign mandor failed");
+      setError(getDisplayErrorMessage(e, "Gagal reassign mandor."));
     }
   };
 
@@ -411,7 +418,7 @@ export default function AdminKebunPage() {
       setSuccess("Supir berhasil ditugaskan ke kebun ini.");
       await loadDetail();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Assign supir failed");
+      setError(getDisplayErrorMessage(e, "Gagal assign supir."));
     }
   };
 
@@ -427,7 +434,7 @@ export default function AdminKebunPage() {
       await loadData();
       await loadDetail();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Reassign supir failed");
+      setError(getDisplayErrorMessage(e, "Gagal reassign supir."));
     }
   };
 
