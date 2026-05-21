@@ -174,4 +174,36 @@ describe("AdminKebunPage delete flow", () => {
     await waitFor(() => expect(assignMandorMock).toHaveBeenCalledWith("KBN001", "3"));
     await waitFor(() => expect(getDetailMock).toHaveBeenCalledTimes(2));
   });
+
+  it("filters assigned supir list by nama supir in kebun detail", async () => {
+    getDetailMock.mockResolvedValueOnce({ ...mockDetail, supirIds: ["5", "6"] });
+    render(<AdminKebunPage />);
+    const user = userEvent.setup();
+
+    await screen.findByText("KBN001");
+    await user.click(screen.getAllByRole("button", { name: "Detail" })[0]);
+    const supirTable = screen.getAllByRole("table").at(-1);
+    expect(supirTable).toBeDefined();
+    const scoped = within(supirTable!);
+
+    await scoped.findByText("Supir 5");
+    await scoped.findByText("Supir 6");
+
+    await user.type(screen.getByPlaceholderText("Filter nama supir"), "6");
+
+    expect(scoped.queryByText("Supir 5")).not.toBeInTheDocument();
+    expect(scoped.getByText("Supir 6")).toBeInTheDocument();
+  });
+
+  it("renders active-mandor delete conflict error from backend clearly", async () => {
+    removeMock.mockRejectedValueOnce(new Error("Cannot delete kebun with active mandor"));
+    render(<AdminKebunPage />);
+    const user = userEvent.setup();
+
+    await screen.findByText("KBN001");
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+    await user.click(screen.getByRole("button", { name: "Hapus" }));
+
+    await screen.findByText(/Cannot delete kebun with active mandor/i);
+  });
 });
