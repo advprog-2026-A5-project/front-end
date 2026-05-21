@@ -1,4 +1,3 @@
-import { env } from "@/config/env";
 import type {
   HarvestSubmissionRequest,
   HarvestSubmissionResponse,
@@ -8,7 +7,7 @@ import type {
 } from "@/types/harvest";
 import { request } from "./httpClient";
 
-const base = env.hasilPanenBaseUrl;
+const base = "/api/hasil-panen";
 
 export const hasilPanenApi = {
   submit: (token: string, body: HarvestSubmissionRequest) =>
