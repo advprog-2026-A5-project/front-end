@@ -31,6 +31,11 @@ interface MapBounds {
   maxY: number;
 }
 
+interface DeleteTarget {
+  code: string;
+  name: string;
+}
+
 const emptyKebunForm: KebunForm = {
   code: "",
   name: "",
@@ -151,6 +156,8 @@ export default function AdminKebunPage() {
   const [supirToReassign, setSupirToReassign] = useState("");
   const [replacementSupirKebunCode, setReplacementSupirKebunCode] = useState("");
   const [supirNameFilter, setSupirNameFilter] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleteSubmitting, setIsDeleteSubmitting] = useState(false);
 
   const title = useMemo(() => (editingCode ? `Edit Kebun ${editingCode}` : "Tambah Kebun Baru"), [editingCode]);
 
@@ -329,10 +336,21 @@ export default function AdminKebunPage() {
     setShowCreateForm(true);
   };
 
-  const onDelete = async (code: string) => {
-    if (!confirm(`Delete kebun ${code}?`)) return;
+  const requestDelete = (kebun: Kebun) => {
+    setDeleteTarget({ code: kebun.code, name: kebun.name });
+  };
+
+  const closeDeleteModal = () => {
+    if (isDeleteSubmitting) return;
+    setDeleteTarget(null);
+  };
+
+  const onDelete = async () => {
+    if (!deleteTarget) return;
+    const code = deleteTarget.code;
     setError(null);
     setSuccess(null);
+    setIsDeleteSubmitting(true);
     try {
       await kebunApi.remove(code);
       if (selectedCode === code) {
@@ -340,9 +358,14 @@ export default function AdminKebunPage() {
         setDetail(null);
       }
       setSuccess(`Kebun ${code} berhasil dihapus.`);
+      setDeleteTarget(null);
       await loadData();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      const fallback = "Gagal menghapus kebun. Silakan coba lagi.";
+      const reason = e instanceof Error && e.message ? e.message : "";
+      setError(reason ? `${fallback} (${reason})` : fallback);
+    } finally {
+      setIsDeleteSubmitting(false);
     }
   };
 
@@ -761,7 +784,7 @@ export default function AdminKebunPage() {
                         <div className="flex flex-wrap gap-2">
                           <button className="rounded-md bg-sky-700 px-3 py-1.5 text-xs font-medium text-white hover:bg-sky-600" onClick={() => setSelectedCode(k.code)} type="button">Detail</button>
                           <button className="rounded-md bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-500" onClick={() => onEdit(k)} type="button">Edit</button>
-                          <button className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500" onClick={() => onDelete(k.code)} type="button">Delete</button>
+                          <button className="rounded-md bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-500" onClick={() => requestDelete(k)} type="button">Delete</button>
                         </div>
                       </td>
                     </tr>
@@ -890,6 +913,35 @@ export default function AdminKebunPage() {
               </div>
             </div>
           </section>
+        )}
+
+        {deleteTarget && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+            <div className="w-full max-w-md rounded-2xl border border-emerald-500/30 bg-slate-900 p-5 shadow-[0_20px_70px_-35px_rgba(16,185,129,0.35)]">
+              <h4 className="text-lg font-semibold text-slate-100">Hapus kebun ini?</h4>
+              <p className="mt-2 text-sm text-slate-300">
+                Data kebun {deleteTarget.code} / {deleteTarget.name} akan dihapus secara permanen.
+              </p>
+              <div className="mt-5 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={closeDeleteModal}
+                  disabled={isDeleteSubmitting}
+                  className="rounded-lg border border-slate-500 bg-slate-900 px-4 py-2 text-sm font-medium text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  disabled={isDeleteSubmitting}
+                  className="rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isDeleteSubmitting ? "Menghapus..." : "Hapus"}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </AuthGuard>
