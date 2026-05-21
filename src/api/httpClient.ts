@@ -13,9 +13,19 @@ interface RequestOptions extends RequestInit {
   token?: string | null;
 }
 
-const tryParseJson = (value: string): unknown | null => {
+type JsonPayload = Record<string, unknown> | unknown[] | string | number | boolean | null;
+
+const isJsonPayload = (value: unknown): value is JsonPayload => {
+  if (value === null) return true;
+  if (Array.isArray(value)) return true;
+  if (typeof value === "object") return true;
+  return ["string", "number", "boolean"].includes(typeof value);
+};
+
+const tryParseJson = (value: string): JsonPayload | null => {
   try {
-    return JSON.parse(value);
+    const parsed: unknown = JSON.parse(value);
+    return isJsonPayload(parsed) ? parsed : null;
   } catch {
     return null;
   }
