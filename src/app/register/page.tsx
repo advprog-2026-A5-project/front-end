@@ -10,7 +10,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 type RegisterRole = Exclude<Role, "ADMIN">;
-type PublicRole = Exclude<Role, "ADMIN">;
 
 function getRegisterErrorMessage(error: unknown) {
   if (error instanceof ApiError) return `${error.status} ${error.message}`;
@@ -24,6 +23,7 @@ export default function RegisterPage() {
   const [nama, setNama] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<RegisterRole>("BURUH");
   const [nomorSertifikasiMandor, setNomorSertifikasiMandor] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -35,11 +35,11 @@ export default function RegisterPage() {
     setError(null);
     setMessage(null);
 
-    if (form.password !== form.confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Password dan konfirmasi password harus sama.");
       return;
     }
-    if (form.role === "MANDOR" && form.nomorSertifikasiMandor.trim() === "") {
+    if (role === "MANDOR" && nomorSertifikasiMandor.trim() === "") {
       setError("Nomor Sertifikasi Mandor wajib diisi.");
       return;
     }
@@ -105,6 +105,16 @@ export default function RegisterPage() {
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <label className="block text-sm">
+            Konfirmasi Password
+            <input
+              className="mt-1 w-full rounded border px-3 py-2"
+              required
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
             />
           </label>
           <label className="block text-sm">
