@@ -33,7 +33,8 @@ const tryParseJson = (value: string): JsonPayload | null => {
 
 export async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers ?? {});
-  if (!headers.has("Content-Type") && options.body) {
+  const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!headers.has("Content-Type") && options.body && !isFormDataBody) {
     headers.set("Content-Type", "application/json");
   }
   if (options.token) {
