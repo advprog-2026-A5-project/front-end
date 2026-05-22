@@ -13,9 +13,28 @@ interface RequestOptions extends RequestInit {
   token?: string | null;
 }
 
+type JsonPayload = Record<string, unknown> | unknown[] | string | number | boolean | null;
+
+const isJsonPayload = (value: unknown): value is JsonPayload => {
+  if (value === null) return true;
+  if (Array.isArray(value)) return true;
+  if (typeof value === "object") return true;
+  return ["string", "number", "boolean"].includes(typeof value);
+};
+
+const tryParseJson = (value: string): JsonPayload | null => {
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isJsonPayload(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 export async function request<T>(url: string, options: RequestOptions = {}): Promise<T> {
   const headers = new Headers(options.headers ?? {});
-  if (!headers.has("Content-Type") && options.body) {
+  const isFormDataBody = typeof FormData !== "undefined" && options.body instanceof FormData;
+  if (!headers.has("Content-Type") && options.body && !isFormDataBody) {
     headers.set("Content-Type", "application/json");
   }
   if (options.token) {
@@ -24,8 +43,19 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
 
   const response = await fetch(url, { ...options, headers });
   const contentType = response.headers.get("content-type");
-  const hasJson = contentType?.includes("application/json");
-  const payload = hasJson ? await response.json() : await response.text();
+  const contentLength = response.headers.get("content-length");
+  const hasBody = response.status !== 204 && contentLength !== "0";
+  const rawBody = hasBody ? await response.text() : "";
+  const isJson = contentType?.includes("application/json") ?? false;
+  const payload = (() => {
+    if (!rawBody.trim()) return null;
+    if (isJson) return tryParseJson(rawBody);
+    if (!response.ok) {
+      const parsed = tryParseJson(rawBody);
+      if (parsed !== null) return parsed;
+    }
+    return rawBody;
+  })();
 
   if (!response.ok) {
     const message =

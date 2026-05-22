@@ -1,5 +1,6 @@
 "use client";
 
+import { ApiError } from "@/api/httpClient";
 import { authApi } from "@/api/authApi";
 import { useAuth } from "@/auth/AuthContext";
 import { GoogleAuthButton } from "@/components/GoogleAuthButton";
@@ -9,6 +10,13 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
 type RegisterRole = Exclude<Role, "ADMIN">;
+type PublicRole = Exclude<Role, "ADMIN">;
+
+function getRegisterErrorMessage(error: unknown) {
+  if (error instanceof ApiError) return `${error.status} ${error.message}`;
+  if (error instanceof Error) return error.message;
+  return "Register failed";
+}
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -26,6 +34,16 @@ export default function RegisterPage() {
     event.preventDefault();
     setError(null);
     setMessage(null);
+
+    if (form.password !== form.confirmPassword) {
+      setError("Password dan konfirmasi password harus sama.");
+      return;
+    }
+    if (form.role === "MANDOR" && form.nomorSertifikasiMandor.trim() === "") {
+      setError("Nomor Sertifikasi Mandor wajib diisi.");
+      return;
+    }
+
     setSubmitting(true);
     try {
       await authApi.signUp({
@@ -38,7 +56,7 @@ export default function RegisterPage() {
       setMessage("Registrasi berhasil. Silakan login.");
       router.push("/login");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Registrasi gagal");
+      setError(getRegisterErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
@@ -103,9 +121,9 @@ export default function RegisterPage() {
           </label>
           {role === "MANDOR" && (
             <label className="block text-sm">
-              Nomor Sertifikasi Mandor
+              <span>Nomor Sertifikasi Mandor</span>
               <input
-                className="mt-1 w-full rounded border px-3 py-2"
+                className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
                 required
                 value={nomorSertifikasiMandor}
                 onChange={(event) => setNomorSertifikasiMandor(event.target.value)}
@@ -114,8 +132,8 @@ export default function RegisterPage() {
           )}
         </div>
 
-        {message && <p className="mt-3 rounded bg-green-50 p-2 text-sm text-green-700">{message}</p>}
-        {error && <p className="mt-3 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>}
+        {error && <p className="mt-3 rounded-xl border border-red-300/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</p>}
+        {message && <p className="mt-3 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-2 text-sm text-emerald-200">{message}</p>}
 
         <button
           className="mt-4 w-full rounded bg-green-700 px-3 py-2 text-white hover:bg-green-800 disabled:bg-slate-400"

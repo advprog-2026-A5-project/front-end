@@ -58,6 +58,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD}
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}
+      INTERNAL_SERVICE_TOKEN: ${AUTH_INTERNAL_API_TOKEN}
     ports:
       - "8080:8080"
 
@@ -73,6 +74,8 @@ services:
       DB_URL: jdbc:postgresql://kebun-db:5432/${KEBUN_DB_NAME}
       DB_USERNAME: ${KEBUN_DB_USER}
       DB_PASSWORD: ${KEBUN_DB_PASSWORD}
+      AUTH_SERVICE_URL: http://auth-service:8080
+      AUTH_INTERNAL_API_TOKEN: ${AUTH_INTERNAL_API_TOKEN}
     ports:
       - "8081:8080"
 
@@ -94,7 +97,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${HASIL_PANEN_DB_PASSWORD}
       SPRING_DATASOURCE_DRIVER: org.postgresql.Driver
       SPRING_JPA_DATABASE_PLATFORM: org.hibernate.dialect.PostgreSQLDialect
-      AUTH_SERVICE_BASE_URL: http://auth-service:8080
+      AUTH_SERVICE_URL: http://auth-service:8080
       KEBUN_SERVICE_BASE_URL: http://kebun-service:8080
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRATION: ${JWT_EXPIRATION}

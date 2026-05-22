@@ -31,7 +31,8 @@ export default function IntegrationSmokeTestPage() {
         setAuthCheck("Failed");
       }
       try {
-        await kebunApi.list();
+        if (!token) throw new Error();
+        await kebunApi.list(token);
         setKebunCheck("Success");
       } catch {
         setKebunCheck("Failed");
@@ -50,8 +51,8 @@ export default function IntegrationSmokeTestPage() {
           <li>Hasil Panen reachable: <span className="font-semibold">{panenCheck}</span></li>
           <li>Current user: <span className="font-semibold">{currentUser ? `${currentUser.nama} (${currentUser.role})` : "Not logged in"}</span></li>
           <li>Admin setup: Buruh and Mandor exist, Buruh assigned to Mandor, Mandor assigned to Kebun.</li>
-          <li>Buruh submits harvest via /buruh/harvests.</li>
-          <li>Mandor validates harvest via /mandor/harvests.</li>
+          <li>Buruh submits harvest via /hasil-panen/lapor.</li>
+          <li>Mandor validates harvest via /hasil-panen/mandor.</li>
           <li>Check transport eligibility via Mandor table action.</li>
         </ol>
       </div>
