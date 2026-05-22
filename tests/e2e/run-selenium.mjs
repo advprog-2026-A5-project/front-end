@@ -1,4 +1,4 @@
-import { Builder, By, Key, until } from "selenium-webdriver";
+import { Builder, By, until } from "selenium-webdriver";
 import chrome from "selenium-webdriver/chrome.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

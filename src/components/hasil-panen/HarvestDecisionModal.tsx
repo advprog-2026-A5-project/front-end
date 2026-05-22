@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface HarvestDecisionModalProps {
   title: string;
@@ -23,13 +23,6 @@ export function HarvestDecisionModal({
 }: HarvestDecisionModalProps) {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!open) {
-      setReason("");
-      setError(null);
-    }
-  }, [open]);
 
   if (!open) return null;
 

@@ -31,6 +31,7 @@ export default function MandorHarvestDashboardPage() {
   const [modalState, setModalState] = useState<ModalState>({ open: false });
   const [submittingDecision, setSubmittingDecision] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const activeMode = modalState.open ? modalState.mode : "approve";
 
   const hydrateDetails = useCallback(
     async (reports: MandorHarvestItem[]) => {
@@ -261,15 +262,16 @@ export default function MandorHarvestDashboardPage() {
         </div>
 
         <HarvestDecisionModal
+          key={modalState.open ? `${modalState.harvestId}-${modalState.mode}` : "closed"}
           description={
-            modalState.mode === "approve"
+            activeMode === "approve"
               ? "Pastikan data laporan panen sudah sesuai sebelum disetujui."
               : "Tuliskan alasan penolakan laporan panen."
           }
           loading={submittingDecision}
-          mode={modalState.open ? modalState.mode : "approve"}
+          mode={activeMode}
           open={modalState.open}
-          title={modalState.mode === "approve" ? "Setujui laporan panen?" : "Tolak laporan panen?"}
+          title={activeMode === "approve" ? "Setujui laporan panen?" : "Tolak laporan panen?"}
           onClose={() => setModalState({ open: false })}
           onSubmit={submitDecision}
         />

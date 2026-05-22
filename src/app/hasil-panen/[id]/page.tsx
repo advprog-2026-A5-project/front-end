@@ -18,7 +18,7 @@ import {
 import type { HarvestDetail } from "@/types/harvest";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function HarvestDetailPage() {
   const { currentUser, token } = useAuth();
@@ -31,7 +31,7 @@ export default function HarvestDetailPage() {
   const [modalMode, setModalMode] = useState<"approve" | "reject" | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
-  const loadDetail = async () => {
+  const loadDetail = useCallback(async () => {
     if (!token || !harvestId) return;
     try {
       setLoading(true);
@@ -47,15 +47,14 @@ export default function HarvestDetailPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [harvestId, token]);
 
   useEffect(() => {
-    if (!token || !harvestId) return;
     const timeoutId = globalThis.setTimeout(() => {
       loadDetail().catch(() => {});
     }, 0);
     return () => globalThis.clearTimeout(timeoutId);
-  }, [harvestId, token]);
+  }, [loadDetail]);
 
   const canValidateAsMandor = currentUser?.role === "MANDOR" && detail?.status === "PENDING";
 
@@ -188,6 +187,7 @@ export default function HarvestDetailPage() {
         </div>
 
         <HarvestDecisionModal
+          key={modalMode ? `${harvestId}-${modalMode}` : "closed"}
           description={
             modalMode === "approve"
               ? "Konfirmasi persetujuan laporan panen ini."
