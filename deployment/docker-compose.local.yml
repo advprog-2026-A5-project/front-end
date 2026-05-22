@@ -53,7 +53,45 @@ services:
       timeout: 5s
       retries: 5
 
+  pengiriman-db:
+    image: postgres:16
+    container_name: mysawit-pengiriman-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pengiriman_db
+      POSTGRES_USER: pengiriman_user
+      POSTGRES_PASSWORD: pengiriman_pass
+    ports:
+      - "5435:5432"
+    volumes:
+      - pengiriman_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pengiriman_user -d pengiriman_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  payment-db:
+    image: postgres:16
+    container_name: mysawit-payment-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: payment_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: payment_pass
+    ports:
+      - "5436:5432"
+    volumes:
+      - payment_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d payment_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   auth_db_data:
   kebun_db_data:
   hasil_panen_db_data:
+  pengiriman_db_data:
+  payment_db_data:

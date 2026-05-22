@@ -12,11 +12,29 @@ const roleLabel: Record<string, string> = {
 };
 
 function getNavItems(role?: string) {
+  if (role === "BURUH") {
+    return [
+      { href: "/hasil-panen/lapor", label: "Lapor Panen" },
+      { href: "/hasil-panen/riwayat", label: "Riwayat Panen" },
+    ];
+  }
+
+  if (role === "MANDOR") {
+    return [
+      { href: "/hasil-panen/mandor", label: "Review Panen" },
+    ];
+  }
+
+  if (role === "SUPIR") {
+    return [{ href: "/hasil-panen", label: "Hasil Panen" }];
+  }
+
   if (role !== "ADMIN") return [];
   return [
     { href: "/admin", label: "Home" },
     { href: "/admin/kebun", label: "Manajemen Kebun" },
     { href: "/admin/assignments", label: "Assignment Kebun" },
+    { href: "/hasil-panen", label: "Hasil Panen" },
   ];
 }
 
@@ -24,13 +42,25 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { currentUser, logout } = useAuth();
   const pathname = usePathname();
 
-  const navItems = getNavItems(currentUser?.role);
+  const navItems = currentUser
+    ? [
+        { href: "/dashboard", label: "Dashboard", show: true },
+        { href: "/admin", label: "Admin Home", show: currentUser.role === "ADMIN" },
+        { href: "/admin/users", label: "Users", show: currentUser.role === "ADMIN" },
+        { href: "/admin/assignments", label: "Assignments", show: currentUser.role === "ADMIN" },
+        { href: "/admin/kebun", label: "Kebun", show: currentUser.role === "ADMIN" },
+        { href: "/buruh/harvests", label: "Buruh Harvests", show: currentUser.role === "BURUH" },
+        { href: "/mandor/harvests", label: "Mandor Harvests", show: currentUser.role === "MANDOR" },
+        { href: "/pengiriman", label: "Pengiriman", show: ["ADMIN", "MANDOR", "SUPIR"].includes(currentUser.role) },
+        { href: "/integration-smoke-test", label: "Smoke Test", show: true },
+      ].filter((item) => item.show)
+    : [];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <header className="border-b border-slate-800 bg-slate-900/90">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-          <h1 className="text-lg font-semibold tracking-tight text-emerald-300">MySawit Admin Panel</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-emerald-300">MySawit Panel</h1>
           {currentUser && (
             <div className="text-right text-sm">
               <p className="font-medium text-slate-100">{currentUser.nama}</p>

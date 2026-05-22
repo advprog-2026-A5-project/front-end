@@ -32,8 +32,8 @@ export default function AdminAssignmentsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [kebunData, userData] = await Promise.all([kebunApi.list(), authApi.users(token)]);
-      const details = await Promise.all(kebunData.map((item) => kebunApi.getDetail(item.code).catch(() => null)));
+      const [kebunData, userData] = await Promise.all([kebunApi.list(token), authApi.users(token)]);
+      const details = await Promise.all(kebunData.map((item) => kebunApi.getDetail(token, item.code).catch(() => null)));
       const snapshot: Record<string, { mandorId: string | null; supirCount: number }> = {};
       for (const detailItem of details) {
         if (!detailItem) continue;
@@ -51,17 +51,18 @@ export default function AdminAssignmentsPage() {
   }, [token, selectedCode]);
 
   const loadDetail = useCallback(async () => {
+    if (!token) return;
     if (!selectedCode) {
       setDetail(null);
       return;
     }
     try {
-      const data = await kebunApi.getDetail(selectedCode);
+      const data = await kebunApi.getDetail(token, selectedCode);
       setDetail(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load kebun detail");
     }
-  }, [selectedCode]);
+  }, [selectedCode, token]);
 
   useEffect(() => {
     const timeoutId = globalThis.setTimeout(() => {
@@ -106,11 +107,11 @@ export default function AdminAssignmentsPage() {
   }, [detail, kebunList]);
 
   const assignMandor = async () => {
-    if (!detail || !mandorToAssign) return;
+    if (!detail || !mandorToAssign || !token) return;
     setError(null);
     setMessage(null);
     try {
-      await kebunApi.assignMandor(detail.code, mandorToAssign);
+      await kebunApi.assignMandor(token, detail.code, mandorToAssign);
       setMandorToAssign("");
       setMessage("Mandor berhasil ditugaskan ke kebun ini.");
       await loadDetail();
@@ -120,11 +121,11 @@ export default function AdminAssignmentsPage() {
   };
 
   const reassignMandor = async () => {
-    if (!detail?.mandorId || !replacementMandorKebunCode) return;
+    if (!detail?.mandorId || !replacementMandorKebunCode || !token) return;
     setError(null);
     setMessage(null);
     try {
-      await kebunApi.reassignMandor(detail.code, detail.mandorId, replacementMandorKebunCode);
+      await kebunApi.reassignMandor(token, detail.code, detail.mandorId, replacementMandorKebunCode);
       setReplacementMandorKebunCode("");
       setMessage("Mandor berhasil dipindahkan ke kebun pengganti.");
       await loadBaseData();
@@ -135,11 +136,11 @@ export default function AdminAssignmentsPage() {
   };
 
   const assignSupir = async () => {
-    if (!detail || !supirToAssign) return;
+    if (!detail || !supirToAssign || !token) return;
     setError(null);
     setMessage(null);
     try {
-      await kebunApi.assignSupir(detail.code, supirToAssign);
+      await kebunApi.assignSupir(token, detail.code, supirToAssign);
       setSupirToAssign("");
       setMessage("Supir berhasil ditugaskan ke kebun ini.");
       await loadDetail();
@@ -149,11 +150,11 @@ export default function AdminAssignmentsPage() {
   };
 
   const reassignSupir = async () => {
-    if (!detail || !supirToReassign || !replacementSupirKebunCode) return;
+    if (!detail || !supirToReassign || !replacementSupirKebunCode || !token) return;
     setError(null);
     setMessage(null);
     try {
-      await kebunApi.reassignSupir(detail.code, supirToReassign, replacementSupirKebunCode);
+      await kebunApi.reassignSupir(token, detail.code, supirToReassign, replacementSupirKebunCode);
       setSupirToReassign("");
       setReplacementSupirKebunCode("");
       setMessage("Supir berhasil dipindahkan ke kebun pengganti.");

@@ -25,5 +25,36 @@ Frontend integration app for:
 - `/admin/users`
 - `/admin/assignments`
 - `/admin/kebun`
-- `/buruh/harvests`  
-- `/mandor/harvests`
+- `/hasil-panen`
+- `/hasil-panen/lapor`
+- `/hasil-panen/riwayat`
+- `/hasil-panen/mandor`
+- `/hasil-panen/mandor/buruh/:buruhId`
+- `/hasil-panen/:id`
+
+Legacy compatibility routes:
+- `/buruh/harvests` -> redirect ke `/hasil-panen/riwayat`
+- `/mandor/harvests` -> redirect ke `/hasil-panen/mandor`
+
+## Local env
+Gunakan naming env Next.js yang sudah dipakai proyek:
+- `NEXT_PUBLIC_AUTH_API_URL`
+- `NEXT_PUBLIC_KEBUN_API_URL`
+- `NEXT_PUBLIC_HASIL_PANEN_API_URL`
+- `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` (opsional, default 5MB)
+
+## E2E Selenium (lokal)
+E2E membaca seed users dari `.env.local`:
+- `E2E_BASE_URL`
+- `E2E_ADMIN_EMAIL`
+- `E2E_ADMIN_PASSWORD`
+- `E2E_BURUH_EMAIL`
+- `E2E_BURUH_PASSWORD`
+- `E2E_MANDOR_EMAIL`
+- `E2E_MANDOR_PASSWORD`
+- `E2E_HEADLESS`
+- `E2E_SKIP_MUTATION_IF_NO_SEED`
+
+Jalankan:
+- `npm run test:e2e`
+- `npm run test:e2e:headed`

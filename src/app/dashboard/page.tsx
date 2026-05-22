@@ -3,6 +3,7 @@
 import { useAuth } from "@/auth/AuthContext";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/components/AuthGuard";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const { currentUser } = useAuth();
@@ -16,6 +17,12 @@ export default function DashboardPage() {
           <Card title="Authentication" subtitle="Login/logout and role-based access" />
           <Card title="Kebun Management" subtitle="Create/list/update/delete kebun data" />
           <Card title="Harvest Validation" subtitle="Buruh submit, Mandor approve/reject, eligibility check" />
+          {["ADMIN", "MANDOR", "SUPIR"].includes(currentUser?.role ?? "") && (
+            <Link className="rounded border bg-slate-50 p-3 text-slate-900 hover:bg-emerald-50" href="/pengiriman">
+              <h3 className="font-medium">Pengiriman Sawit</h3>
+              <p className="mt-1 text-sm text-slate-600">Assign supir, update status, and process shipment approvals</p>
+            </Link>
+          )}
         </div>
       </AppShell>
     </AuthGuard>

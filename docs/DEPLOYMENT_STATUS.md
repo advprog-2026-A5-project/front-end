@@ -36,9 +36,9 @@ Workspace: `MySawitAll` (multi-repo)
 ### D. Frontend (`front-end`)
 - Stack: Next.js App Router.
 - Env resolution already implemented in `src/config/env.ts`:
-  - `NEXT_PUBLIC_AUTH_API_BASE_URL` (fallback localhost:8080)
-  - `NEXT_PUBLIC_KEBUN_API_BASE_URL` (fallback localhost:8081)
-  - `NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL` (fallback localhost:8082)
+  - `NEXT_PUBLIC_AUTH_API_URL` (fallback localhost:8080)
+  - `NEXT_PUBLIC_KEBUN_API_URL` (fallback localhost:8081)
+  - `NEXT_PUBLIC_HASIL_PANEN_API_URL` (fallback localhost:8082)
 - Login flow:
   - calls `POST /api/auth/signin`
   - stores JWT in `localStorage` (`mysawit_token`)
