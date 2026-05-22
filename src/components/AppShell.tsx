@@ -22,6 +22,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         { href: "/admin/kebun", label: "Kebun", show: currentUser.role === "ADMIN" },
         { href: "/buruh/harvests", label: "Buruh Harvests", show: currentUser.role === "BURUH" },
         { href: "/mandor/harvests", label: "Mandor Harvests", show: currentUser.role === "MANDOR" },
+        { href: "/pengiriman", label: "Pengiriman", show: ["ADMIN", "MANDOR", "SUPIR"].includes(currentUser.role) },
         { href: "/integration-smoke-test", label: "Smoke Test", show: true },
       ].filter((item) => item.show)
     : [];
