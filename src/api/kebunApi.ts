@@ -6,39 +6,43 @@ const proxyBase = "/api/kebun";
 const directBase = env.kebunBaseUrl;
 
 export const kebunApi = {
-  list: (filters?: { name?: string; code?: string }) => {
+  list: (token: string, filters?: { name?: string; code?: string }) => {
     const query = new URLSearchParams();
     if (filters?.name) query.set("name", filters.name);
     if (filters?.code) query.set("code", filters.code);
     const suffix = query.toString() ? `?${query.toString()}` : "";
-    return request<Kebun[]>(`${proxyBase}${suffix}`);
+    return request<Kebun[]>(`${proxyBase}${suffix}`, { token });
   },
-  getByCode: (code: string) => request<Kebun>(`${proxyBase}/${code}`),
-  getDetail: (code: string) => request<KebunDetail>(`${proxyBase}/${code}/detail`),
-  create: (kebun: Kebun) =>
-    request<Kebun>(`${proxyBase}`, { method: "POST", body: JSON.stringify(kebun) }),
-  update: (code: string, kebun: Kebun) =>
-    request<Kebun>(`${proxyBase}/${code}`, { method: "PUT", body: JSON.stringify(kebun) }),
-  remove: (code: string) => request<void>(`${proxyBase}/${code}`, { method: "DELETE" }),
-  assignMandor: (code: string, mandorId: string) =>
+  getByCode: (token: string, code: string) => request<Kebun>(`${proxyBase}/${code}`, { token }),
+  getDetail: (token: string, code: string) => request<KebunDetail>(`${proxyBase}/${code}/detail`, { token }),
+  create: (token: string, kebun: Kebun) =>
+    request<Kebun>(`${proxyBase}`, { method: "POST", body: JSON.stringify(kebun), token }),
+  update: (token: string, code: string, kebun: Kebun) =>
+    request<Kebun>(`${proxyBase}/${code}`, { method: "PUT", body: JSON.stringify(kebun), token }),
+  remove: (token: string, code: string) => request<void>(`${proxyBase}/${code}`, { method: "DELETE", token }),
+  assignMandor: (token: string, code: string, mandorId: string) =>
     request<{ message: string }>(`${proxyBase}/${code}/mandor/assign`, {
       method: "POST",
       body: JSON.stringify({ mandorId }),
+      token,
     }),
-  reassignMandor: (code: string, mandorId: string, replacementKebunCode: string) =>
+  reassignMandor: (token: string, code: string, mandorId: string, replacementKebunCode: string) =>
     request<{ message: string }>(`${proxyBase}/${code}/mandor/reassign`, {
       method: "POST",
       body: JSON.stringify({ mandorId, replacementKebunCode }),
+      token,
     }),
-  assignSupir: (code: string, supirId: string) =>
+  assignSupir: (token: string, code: string, supirId: string) =>
     request<{ message: string }>(`${proxyBase}/${code}/supir/assign`, {
       method: "POST",
       body: JSON.stringify({ supirId }),
+      token,
     }),
-  reassignSupir: (code: string, supirId: string, replacementKebunCode: string) =>
+  reassignSupir: (token: string, code: string, supirId: string, replacementKebunCode: string) =>
     request<{ message: string }>(`${proxyBase}/${code}/supir/reassign`, {
       method: "POST",
       body: JSON.stringify({ supirId, replacementKebunCode }),
+      token,
     }),
   getMandorKebun: (mandorId: number, token?: string) =>
     request<MandorKebunAssignment>(`${directBase}/internal/mandors/${mandorId}/kebun`, { token }),

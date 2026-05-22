@@ -38,10 +38,9 @@ Legacy compatibility routes:
 
 ## Local env
 Gunakan naming env Next.js yang sudah dipakai proyek:
-- `NEXT_PUBLIC_AUTH_API_BASE_URL`
-- `NEXT_PUBLIC_KEBUN_API_BASE_URL`
-- `NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL`
-- `KEBUN_API_BASE_URL`
+- `NEXT_PUBLIC_AUTH_API_URL`
+- `NEXT_PUBLIC_KEBUN_API_URL`
+- `NEXT_PUBLIC_HASIL_PANEN_API_URL`
 - `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB` (opsional, default 5MB)
 
 ## E2E Selenium (lokal)

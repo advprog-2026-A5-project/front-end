@@ -31,7 +31,8 @@ export default function IntegrationSmokeTestPage() {
         setAuthCheck("Failed");
       }
       try {
-        await kebunApi.list();
+        if (!token) throw new Error();
+        await kebunApi.list(token);
         setKebunCheck("Success");
       } catch {
         setKebunCheck("Failed");

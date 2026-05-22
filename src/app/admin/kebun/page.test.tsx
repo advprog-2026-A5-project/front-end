@@ -99,7 +99,7 @@ describe("AdminKebunPage delete flow", () => {
     await waitFor(() => {
       expect(screen.queryByText("KBN001")).not.toBeInTheDocument();
     });
-    expect(removeMock).toHaveBeenCalledWith("KBN001");
+    expect(removeMock).toHaveBeenCalledWith("token-test", "KBN001");
   });
 
   it("shows only MANDOR users in mandor dropdown", async () => {
@@ -171,7 +171,7 @@ describe("AdminKebunPage delete flow", () => {
     await user.selectOptions(mandorSelect, "3");
     await user.click(screen.getByRole("button", { name: "Assign Mandor" }));
 
-    await waitFor(() => expect(assignMandorMock).toHaveBeenCalledWith("KBN001", "3"));
+    await waitFor(() => expect(assignMandorMock).toHaveBeenCalledWith("token-test", "KBN001", "3"));
     await waitFor(() => expect(getDetailMock).toHaveBeenCalledTimes(2));
   });
 
