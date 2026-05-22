@@ -49,7 +49,7 @@ export default function HasilPanenHomePage() {
 
             {(role === "ADMIN" || role === "SUPIR") && (
               <FeatureCard
-                href="/hasil-panen/mandor"
+                href="/hasil-panen"
                 title="Monitoring Hasil Panen"
                 description="Pantau data laporan panen dan status validasi."
                 cta="Lihat Data"

@@ -4,45 +4,81 @@ import { hasilPanenApi } from "@/api/hasilPanenApi";
 import { useAuth } from "@/auth/AuthContext";
 import { AppShell } from "@/components/AppShell";
 import { AuthGuard } from "@/components/AuthGuard";
+import { HarvestDecisionModal } from "@/components/hasil-panen/HarvestDecisionModal";
 import { HarvestStatusBadge } from "@/components/hasil-panen/HarvestStatusBadge";
 import {
   HarvestErrorState,
   HarvestLoadingState,
 } from "@/components/hasil-panen/HarvestStates";
-import { formatDateTime, formatHarvestDate } from "@/components/hasil-panen/harvestHelpers";
+import {
+  formatDateTime,
+  formatHarvestDate,
+  mapHarvestErrorMessage,
+} from "@/components/hasil-panen/harvestHelpers";
 import type { HarvestDetail } from "@/types/harvest";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function HarvestDetailPage() {
-  const { token } = useAuth();
+  const { currentUser, token } = useAuth();
   const params = useParams<{ id: string }>();
   const harvestId = params.id;
   const [detail, setDetail] = useState<HarvestDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [modalMode, setModalMode] = useState<"approve" | "reject" | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+
+  const loadDetail = async () => {
+    if (!token || !harvestId) return;
+    try {
+      setLoading(true);
+      const response = await hasilPanenApi.getHarvestDetail(token, harvestId);
+      setDetail(response);
+      setError(null);
+    } catch (detailError) {
+      setError(
+        detailError instanceof Error
+          ? detailError.message
+          : "Gagal memuat detail laporan panen.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (!token || !harvestId) return;
-    const timeoutId = globalThis.setTimeout(async () => {
-      try {
-        setLoading(true);
-        const response = await hasilPanenApi.getHarvestDetail(token, harvestId);
-        setDetail(response);
-        setError(null);
-      } catch (detailError) {
-        setError(
-          detailError instanceof Error
-            ? detailError.message
-            : "Gagal memuat detail laporan panen.",
-        );
-      } finally {
-        setLoading(false);
-      }
+    const timeoutId = globalThis.setTimeout(() => {
+      loadDetail().catch(() => {});
     }, 0);
     return () => globalThis.clearTimeout(timeoutId);
   }, [harvestId, token]);
+
+  const canValidateAsMandor = currentUser?.role === "MANDOR" && detail?.status === "PENDING";
+
+  const submitDecision = async (reason?: string) => {
+    if (!token || !harvestId || !modalMode) return;
+    setSubmitting(true);
+    setFeedback(null);
+    try {
+      if (modalMode === "approve") {
+        await hasilPanenApi.approve(token, harvestId);
+        setFeedback("Laporan panen berhasil disetujui.");
+      } else {
+        await hasilPanenApi.reject(token, harvestId, reason ?? "");
+        setFeedback("Laporan panen berhasil ditolak.");
+      }
+      setModalMode(null);
+      await loadDetail();
+    } catch (decisionError) {
+      setError(mapHarvestErrorMessage(decisionError, "Gagal memproses validasi panen."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <AuthGuard>
@@ -58,6 +94,11 @@ export default function HarvestDetailPage() {
             </Link>
           </div>
 
+          {feedback && (
+            <div className="rounded-2xl border border-emerald-300/30 bg-emerald-500/10 p-4 text-sm text-emerald-200">
+              {feedback}
+            </div>
+          )}
           {loading && <HarvestLoadingState text="Memuat detail laporan..." />}
           {!loading && error && <HarvestErrorState text={error} />}
 
@@ -96,6 +137,25 @@ export default function HarvestDetailPage() {
                     <p>{detail.rejectionReason}</p>
                   </div>
                 )}
+
+                {canValidateAsMandor && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <button
+                      className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                      type="button"
+                      onClick={() => setModalMode("approve")}
+                    >
+                      Setujui Laporan
+                    </button>
+                    <button
+                      className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-500"
+                      type="button"
+                      onClick={() => setModalMode("reject")}
+                    >
+                      Tolak Laporan
+                    </button>
+                  </div>
+                )}
               </section>
 
               <section className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
@@ -126,6 +186,20 @@ export default function HarvestDetailPage() {
             </>
           )}
         </div>
+
+        <HarvestDecisionModal
+          description={
+            modalMode === "approve"
+              ? "Konfirmasi persetujuan laporan panen ini."
+              : "Masukkan alasan penolakan laporan panen."
+          }
+          loading={submitting}
+          mode={modalMode ?? "approve"}
+          open={modalMode !== null}
+          title={modalMode === "approve" ? "Setujui laporan panen?" : "Tolak laporan panen?"}
+          onClose={() => setModalMode(null)}
+          onSubmit={submitDecision}
+        />
       </AppShell>
     </AuthGuard>
   );
