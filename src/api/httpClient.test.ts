@@ -57,4 +57,24 @@ describe("request", () => {
       }),
     );
   });
+
+  it("does not force JSON content type when body is FormData", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(
+      createResponse({ ok: true, status: 200, statusText: "OK", contentType: "application/json", body: "{}" }),
+    );
+    globalThis.fetch = fetchMock as typeof fetch;
+    const formData = new FormData();
+    formData.append("photos", new Blob(["test"], { type: "image/jpeg" }), "proof.jpg");
+
+    await request<unknown>("/api/hasil-panen/harvests", {
+      method: "POST",
+      body: formData,
+      token: "token-value",
+    });
+
+    const secondArg = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const headers = new Headers(secondArg.headers);
+    expect(headers.get("Content-Type")).toBeNull();
+    expect(headers.get("Authorization")).toBe("Bearer token-value");
+  });
 });

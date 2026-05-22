@@ -55,12 +55,13 @@ async function forwardRequest(
   const body =
     request.method === "GET" || request.method === "HEAD"
       ? undefined
-      : await request.text();
+      : await request.arrayBuffer();
 
-  const headers = {
-    "content-type": request.headers.get("content-type") ?? "application/json",
-    authorization: request.headers.get("authorization") ?? "",
-  };
+  const headers = new Headers();
+  const contentType = request.headers.get("content-type");
+  const authorization = request.headers.get("authorization");
+  if (contentType) headers.set("content-type", contentType);
+  if (authorization) headers.set("authorization", authorization);
 
   try {
     const upstream = await fetch(upstreamUrl, {
