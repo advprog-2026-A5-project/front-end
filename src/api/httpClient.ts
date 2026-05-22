@@ -39,6 +39,7 @@ export async function request<T>(url: string, options: RequestOptions = {}): Pro
         "error" in payload &&
         typeof (payload as Record<string, unknown>).error === "string" &&
         (payload as Record<string, unknown>).error) ||
+      (typeof payload === "string" && payload.trim()) ||
       response.statusText;
     throw new ApiError(response.status, String(message), payload);
   }
