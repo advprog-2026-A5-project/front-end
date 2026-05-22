@@ -2,11 +2,14 @@
 
 import { ApiError } from "@/api/httpClient";
 import { authApi } from "@/api/authApi";
+import { useAuth } from "@/auth/AuthContext";
+import { GoogleAuthButton } from "@/components/GoogleAuthButton";
 import type { Role } from "@/types/auth";
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useState } from "react";
 
-type PublicRole = Exclude<Role, "ADMIN">;
+type RegisterRole = Exclude<Role, "ADMIN">;
 
 function getRegisterErrorMessage(error: unknown) {
   if (error instanceof ApiError) return `${error.status} ${error.message}`;
@@ -15,14 +18,14 @@ function getRegisterErrorMessage(error: unknown) {
 }
 
 export default function RegisterPage() {
-  const [form, setForm] = useState({
-    nama: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "BURUH" as PublicRole,
-    nomorSertifikasiMandor: "",
-  });
+  const router = useRouter();
+  const { loginWithGoogle, loading } = useAuth();
+  const [nama, setNama] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState<RegisterRole>("BURUH");
+  const [nomorSertifikasiMandor, setNomorSertifikasiMandor] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -32,11 +35,11 @@ export default function RegisterPage() {
     setError(null);
     setMessage(null);
 
-    if (form.password !== form.confirmPassword) {
+    if (password !== confirmPassword) {
       setError("Password dan konfirmasi password harus sama.");
       return;
     }
-    if (form.role === "MANDOR" && form.nomorSertifikasiMandor.trim() === "") {
+    if (role === "MANDOR" && nomorSertifikasiMandor.trim() === "") {
       setError("Nomor Sertifikasi Mandor wajib diisi.");
       return;
     }
@@ -44,22 +47,14 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await authApi.signUp({
-        username: form.email.split("@")[0],
-        email: form.email.trim(),
-        nama: form.nama.trim(),
-        password: form.password,
-        role: form.role,
-        nomorSertifikasiMandor: form.role === "MANDOR" ? form.nomorSertifikasiMandor.trim() : undefined,
+        nama,
+        email,
+        password,
+        role,
+        nomorSertifikasiMandor: role === "MANDOR" ? nomorSertifikasiMandor : undefined,
       });
       setMessage("Registrasi berhasil. Silakan login.");
-      setForm({
-        nama: "",
-        email: "",
-        password: "",
-        confirmPassword: "",
-        role: "BURUH",
-        nomorSertifikasiMandor: "",
-      });
+      router.push("/login");
     } catch (e) {
       setError(getRegisterErrorMessage(e));
     } finally {
@@ -67,76 +62,81 @@ export default function RegisterPage() {
     }
   };
 
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950 p-4">
-      <form className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900/85 p-6 shadow-[0_20px_70px_-35px_rgba(16,185,129,0.35)]" onSubmit={onSubmit}>
-        <h1 className="mb-1 text-2xl font-semibold text-emerald-300">MySawit Register</h1>
-        <p className="mb-4 text-sm text-slate-400">Daftarkan akun operasional untuk Buruh, Mandor, atau Supir.</p>
+  const onGoogleCredential = useCallback(async (idToken: string) => {
+    setError(null);
+    try {
+      await loginWithGoogle(idToken, role);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Registrasi Google gagal");
+    }
+  }, [loginWithGoogle, role]);
 
-        <div className="grid gap-3 text-sm text-slate-200">
-          <label className="block">
-            <span>Nama</span>
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
+      <form className="w-full max-w-md rounded-lg border border-slate-200 bg-white p-6 shadow-sm" onSubmit={onSubmit}>
+        <h1 className="text-xl font-semibold text-green-800">Register MySawit</h1>
+        <p className="mt-1 text-sm text-slate-600">Daftar sebagai Buruh, Mandor, atau Supir.</p>
+
+        <div className="mt-5 space-y-3">
+          <label className="block text-sm">
+            Nama
             <input
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
+              className="mt-1 w-full rounded border px-3 py-2"
               required
-              value={form.nama}
-              onChange={(e) => setForm((prev) => ({ ...prev, nama: e.target.value }))}
+              value={nama}
+              onChange={(event) => setNama(event.target.value)}
             />
           </label>
-          <label className="block">
-            <span>Email</span>
+          <label className="block text-sm">
+            Email
             <input
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
+              className="mt-1 w-full rounded border px-3 py-2"
               required
               type="email"
-              value={form.email}
-              onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
             />
           </label>
-          <div className="grid gap-3 md:grid-cols-2">
-            <label className="block">
-              <span>Password</span>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
-                required
-                type="password"
-                value={form.password}
-                onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
-              />
-            </label>
-            <label className="block">
-              <span>Konfirmasi Password</span>
-              <input
-                className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
-                required
-                type="password"
-                value={form.confirmPassword}
-                onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
-              />
-            </label>
-          </div>
-
-          <label className="block">
-            <span>Role</span>
+          <label className="block text-sm">
+            Password
+            <input
+              className="mt-1 w-full rounded border px-3 py-2"
+              required
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+          </label>
+          <label className="block text-sm">
+            Konfirmasi Password
+            <input
+              className="mt-1 w-full rounded border px-3 py-2"
+              required
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+            />
+          </label>
+          <label className="block text-sm">
+            Role
             <select
-              className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
-              value={form.role}
-              onChange={(e) => setForm((prev) => ({ ...prev, role: e.target.value as PublicRole }))}
+              className="mt-1 w-full rounded border px-3 py-2"
+              value={role}
+              onChange={(event) => setRole(event.target.value as RegisterRole)}
             >
-              <option value="BURUH">Buruh</option>
-              <option value="MANDOR">Mandor</option>
-              <option value="SUPIR">Supir</option>
+              <option value="BURUH">BURUH</option>
+              <option value="MANDOR">MANDOR</option>
+              <option value="SUPIR">SUPIR</option>
             </select>
           </label>
-
-          {form.role === "MANDOR" && (
-            <label className="block">
+          {role === "MANDOR" && (
+            <label className="block text-sm">
               <span>Nomor Sertifikasi Mandor</span>
               <input
                 className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-slate-100 outline-none focus:border-emerald-500"
                 required
-                value={form.nomorSertifikasiMandor}
-                onChange={(e) => setForm((prev) => ({ ...prev, nomorSertifikasiMandor: e.target.value }))}
+                value={nomorSertifikasiMandor}
+                onChange={(event) => setNomorSertifikasiMandor(event.target.value)}
               />
             </label>
           )}
@@ -145,21 +145,24 @@ export default function RegisterPage() {
         {error && <p className="mt-3 rounded-xl border border-red-300/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</p>}
         {message && <p className="mt-3 rounded-xl border border-emerald-300/30 bg-emerald-500/10 p-2 text-sm text-emerald-200">{message}</p>}
 
-        <button className="mt-4 w-full rounded-xl bg-emerald-600 px-3 py-2 font-medium text-white hover:bg-emerald-500" disabled={submitting} type="submit">
-          {submitting ? "Registering..." : "Register"}
-        </button>
         <button
-          className="mt-2 w-full rounded-xl border border-slate-500 bg-slate-900 px-3 py-2 text-sm font-medium text-slate-100 hover:bg-slate-800"
-          onClick={() => {
-            // Placeholder: Google OAuth registration is shown until backend support is available.
-          }}
-          type="button"
+          className="mt-4 w-full rounded bg-green-700 px-3 py-2 text-white hover:bg-green-800 disabled:bg-slate-400"
+          disabled={submitting || loading}
+          type="submit"
         >
-          Register with Google
+          {submitting ? "Mendaftarkan..." : "Register"}
         </button>
-        <p className="mt-4 text-center text-sm text-slate-400">
+
+        <div className="my-5 flex items-center gap-3 text-xs uppercase text-slate-400">
+          <span className="h-px flex-1 bg-slate-200" />
+          atau
+          <span className="h-px flex-1 bg-slate-200" />
+        </div>
+        <GoogleAuthButton disabled={submitting || loading} mode="signup" onCredential={onGoogleCredential} />
+
+        <p className="mt-5 text-center text-sm text-slate-600">
           Sudah punya akun?{" "}
-          <Link className="font-medium text-emerald-300 hover:text-emerald-200" href="/login">
+          <Link className="font-medium text-green-700 hover:text-green-800" href="/login">
             Login
           </Link>
         </p>

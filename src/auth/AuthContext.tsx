@@ -11,6 +11,7 @@ interface AuthContextValue {
   loading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string, role?: Role) => Promise<void>;
   logout: () => Promise<void>;
   refreshCurrentUser: () => Promise<void>;
   hasRole: (roles: Role[]) => boolean;
@@ -24,6 +25,7 @@ const defaultRouteByRole = (role: Role) => {
   if (role === "ADMIN") return "/admin";
   if (role === "BURUH") return "/buruh/harvests";
   if (role === "MANDOR") return "/mandor/harvests";
+  if (role === "SUPIR") return "/pengiriman";
   return "/dashboard";
 };
 
@@ -79,6 +81,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router]);
 
+  const loginWithGoogle = useCallback(async (idToken: string, role?: Role) => {
+    setError(null);
+    setLoading(true);
+    try {
+      const response = await authApi.google(idToken, role);
+      localStorage.setItem(TOKEN_KEY, response.token);
+      setToken(response.token);
+      const me = await authApi.me(response.token);
+      setCurrentUser(me);
+      router.push(defaultRouteByRole(me.role));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Google login failed");
+      throw e;
+    } finally {
+      setLoading(false);
+    }
+  }, [router]);
+
   const logout = useCallback(async () => {
     try {
       await authApi.signOut();
@@ -96,8 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const hasRole = useCallback((roles: Role[]) => !!currentUser && roles.includes(currentUser.role), [currentUser]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ token, currentUser, loading, error, login, logout, refreshCurrentUser, hasRole }),
-    [token, currentUser, loading, error, login, logout, refreshCurrentUser, hasRole],
+    () => ({ token, currentUser, loading, error, login, loginWithGoogle, logout, refreshCurrentUser, hasRole }),
+    [token, currentUser, loading, error, login, loginWithGoogle, logout, refreshCurrentUser, hasRole],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
