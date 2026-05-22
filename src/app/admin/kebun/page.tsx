@@ -213,10 +213,11 @@ export default function AdminKebunPage() {
   }, [token]);
 
   const loadData = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     setError(null);
     try {
-      const kebunData = await kebunApi.list(activeFilters);
+      const kebunData = await kebunApi.list(token, activeFilters);
       setKebunList(kebunData);
       if (selectedCode && !kebunData.some((k) => k.code === selectedCode)) {
         setSelectedCode(null);
@@ -228,20 +229,21 @@ export default function AdminKebunPage() {
     } finally {
       setLoading(false);
     }
-  }, [activeFilters, selectedCode]);
+  }, [activeFilters, selectedCode, token]);
 
   const loadDetail = useCallback(async () => {
+    if (!token) return;
     if (!selectedCode) {
       setDetail(null);
       return;
     }
     try {
-      const data = await kebunApi.getDetail(selectedCode);
+      const data = await kebunApi.getDetail(token, selectedCode);
       setDetail(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to load kebun detail");
     }
-  }, [selectedCode]);
+  }, [selectedCode, token]);
 
   useEffect(() => {
     const timeoutId = globalThis.setTimeout(() => {
@@ -308,6 +310,7 @@ export default function AdminKebunPage() {
     }
 
     try {
+      if (!token) throw new Error("Authentication token is missing");
       const payload: Kebun = {
         code: form.code.trim(),
         name: form.name.trim(),
@@ -316,10 +319,10 @@ export default function AdminKebunPage() {
       };
 
       if (editingCode) {
-        await kebunApi.update(editingCode, payload);
+        await kebunApi.update(token, editingCode, payload);
         setSuccess(`Kebun ${editingCode} berhasil diperbarui.`);
       } else {
-        await kebunApi.create(payload);
+        await kebunApi.create(token, payload);
         setSuccess(`Kebun ${payload.code} berhasil dibuat.`);
       }
 
@@ -359,7 +362,8 @@ export default function AdminKebunPage() {
     setSuccess(null);
     setIsDeleteSubmitting(true);
     try {
-      await kebunApi.remove(code);
+      if (!token) throw new Error("Authentication token is missing");
+      await kebunApi.remove(token, code);
       setKebunList((prev) => prev.filter((item) => item.code !== code));
       if (selectedKebunOnMap === code) {
         setSelectedKebunOnMap(null);
@@ -380,11 +384,11 @@ export default function AdminKebunPage() {
   };
 
   const assignMandor = async () => {
-    if (!detail || !mandorToAssign) return;
+    if (!detail || !mandorToAssign || !token) return;
     setError(null);
     setSuccess(null);
     try {
-      await kebunApi.assignMandor(detail.code, mandorToAssign);
+      await kebunApi.assignMandor(token, detail.code, mandorToAssign);
       setMandorToAssign("");
       setSuccess("Mandor berhasil ditugaskan ke kebun ini.");
       await loadDetail();
@@ -394,11 +398,11 @@ export default function AdminKebunPage() {
   };
 
   const reassignMandor = async () => {
-    if (!detail?.mandorId || !replacementMandorKebunCode) return;
+    if (!detail?.mandorId || !replacementMandorKebunCode || !token) return;
     setError(null);
     setSuccess(null);
     try {
-      await kebunApi.reassignMandor(detail.code, detail.mandorId, replacementMandorKebunCode);
+      await kebunApi.reassignMandor(token, detail.code, detail.mandorId, replacementMandorKebunCode);
       setReplacementMandorKebunCode("");
       setSuccess("Mandor berhasil dipindahkan ke kebun pengganti.");
       await loadData();
@@ -409,11 +413,11 @@ export default function AdminKebunPage() {
   };
 
   const assignSupir = async () => {
-    if (!detail || !supirToAssign) return;
+    if (!detail || !supirToAssign || !token) return;
     setError(null);
     setSuccess(null);
     try {
-      await kebunApi.assignSupir(detail.code, supirToAssign);
+      await kebunApi.assignSupir(token, detail.code, supirToAssign);
       setSupirToAssign("");
       setSuccess("Supir berhasil ditugaskan ke kebun ini.");
       await loadDetail();
@@ -423,11 +427,11 @@ export default function AdminKebunPage() {
   };
 
   const reassignSupir = async () => {
-    if (!detail || !supirToReassign || !replacementSupirKebunCode) return;
+    if (!detail || !supirToReassign || !replacementSupirKebunCode || !token) return;
     setError(null);
     setSuccess(null);
     try {
-      await kebunApi.reassignSupir(detail.code, supirToReassign, replacementSupirKebunCode);
+      await kebunApi.reassignSupir(token, detail.code, supirToReassign, replacementSupirKebunCode);
       setSupirToReassign("");
       setReplacementSupirKebunCode("");
       setSuccess("Supir berhasil dipindahkan ke kebun pengganti.");

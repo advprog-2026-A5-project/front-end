@@ -14,11 +14,9 @@ Pastikan endpoint berikut dapat diakses:
 Copy `.env.example` ke `.env.local` dan sesuaikan bila perlu.
 
 Gunakan naming env Next.js:
-- `NEXT_PUBLIC_AUTH_API_BASE_URL`
-- `NEXT_PUBLIC_KEBUN_API_BASE_URL`
-- `NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL`
-- `KEBUN_API_BASE_URL`
-- `HASIL_PANEN_API_BASE_URL`
+- `NEXT_PUBLIC_AUTH_API_URL`
+- `NEXT_PUBLIC_KEBUN_API_URL`
+- `NEXT_PUBLIC_HASIL_PANEN_API_URL`
 - `NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB`
 
 ## 3) Jalankan frontend

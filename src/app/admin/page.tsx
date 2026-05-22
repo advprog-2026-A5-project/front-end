@@ -8,13 +8,14 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 export default function AdminPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, token } = useAuth();
   const [summary, setSummary] = useState({ totalKebun: 0, kebunWithMandor: 0, totalSupirAssigned: 0 });
 
   const loadSummary = useCallback(async () => {
+    if (!token) return;
     try {
-      const kebunList = await kebunApi.list();
-      const details = await Promise.all(kebunList.map((item) => kebunApi.getDetail(item.code).catch(() => null)));
+      const kebunList = await kebunApi.list(token);
+      const details = await Promise.all(kebunList.map((item) => kebunApi.getDetail(token, item.code).catch(() => null)));
       const kebunWithMandor = details.filter((detail) => detail?.mandorId).length;
       const totalSupirAssigned = details.reduce((acc, detail) => acc + (detail?.supirIds.length ?? 0), 0);
       setSummary({
@@ -25,7 +26,7 @@ export default function AdminPage() {
     } catch {
       setSummary({ totalKebun: 0, kebunWithMandor: 0, totalSupirAssigned: 0 });
     }
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     const timeoutId = globalThis.setTimeout(() => {
