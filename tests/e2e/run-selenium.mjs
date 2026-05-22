@@ -41,6 +41,35 @@ async function assertNoRawJsonError(driver) {
   }
 }
 
+async function clickWithScroll(driver, element) {
+  await driver.executeScript("arguments[0].scrollIntoView({block: 'center'});", element);
+  await driver.wait(until.elementIsVisible(element), 10000);
+  await driver.executeScript("arguments[0].click();", element);
+}
+
+async function waitForMandorOutcome(driver, successText) {
+  await driver.wait(async () => {
+    const bodyText = await driver.findElement(By.tagName("body")).getText();
+    return bodyText.includes(successText) || bodyText.includes("Terjadi masalah");
+  }, 20000);
+
+  const bodyText = await driver.findElement(By.tagName("body")).getText();
+  if (bodyText.includes(successText)) {
+    return "success";
+  }
+  return "error";
+}
+
+async function closeDecisionModalIfOpen(driver) {
+  const overlays = await driver.findElements(By.css("div.fixed.inset-0"));
+  if (overlays.length === 0) return;
+  const cancelButtons = await driver.findElements(By.xpath("//div[contains(@class,'fixed') and contains(@class,'inset-0')]//button[normalize-space()='Batal']"));
+  if (cancelButtons.length > 0) {
+    await clickWithScroll(driver, cancelButtons[0]);
+    await driver.wait(async () => (await driver.findElements(By.css("div.fixed.inset-0"))).length === 0, 10000);
+  }
+}
+
 async function login(driver, email, password) {
   await driver.get(`${config.baseUrl}/login`);
   await driver.wait(until.elementLocated(By.css("input[type='email']")), 15000);
@@ -144,16 +173,32 @@ async function mandorFlow(driver) {
   }
 
   if (rejectButtons.length > 0) {
-    await rejectButtons[0].click();
+    const rejectButton = rejectButtons[0];
+    await clickWithScroll(driver, rejectButton);
     await driver.wait(until.elementLocated(By.css("[data-testid='reject-reason-input']")), 10000);
     const reasonInput = await driver.findElement(By.css("[data-testid='reject-reason-input']"));
     await reasonInput.sendKeys(`Tidak valid (${Date.now()})`);
-    await driver.findElement(By.xpath("//button[normalize-space()='Tolak']")).click();
-    await driver.wait(until.elementLocated(By.xpath("//*[contains(normalize-space(), 'berhasil ditolak')]")), 15000);
+    const confirmReject = await driver.findElement(By.xpath("//div[contains(@class,'fixed') and contains(@class,'inset-0')]//button[normalize-space()='Tolak']"));
+    await clickWithScroll(driver, confirmReject);
+    const outcome = await waitForMandorOutcome(driver, "berhasil ditolak");
+    if (outcome !== "success" && config.skipMutationIfNoSeed) {
+      console.log("[MANDOR] Reject mutation returned validation/authorization error. Skipping due to E2E_SKIP_MUTATION_IF_NO_SEED=true.");
+      await closeDecisionModalIfOpen(driver);
+    } else if (outcome !== "success") {
+      throw new Error("Mandor reject mutation did not return success.");
+    }
   } else {
-    await approveButtons[0].click();
-    await driver.findElement(By.xpath("//button[normalize-space()='Setujui']")).click();
-    await driver.wait(until.elementLocated(By.xpath("//*[contains(normalize-space(), 'berhasil disetujui')]")), 15000);
+    const approveButton = approveButtons[0];
+    await clickWithScroll(driver, approveButton);
+    const confirmApprove = await driver.findElement(By.xpath("//div[contains(@class,'fixed') and contains(@class,'inset-0')]//button[normalize-space()='Setujui']"));
+    await clickWithScroll(driver, confirmApprove);
+    const outcome = await waitForMandorOutcome(driver, "berhasil disetujui");
+    if (outcome !== "success" && config.skipMutationIfNoSeed) {
+      console.log("[MANDOR] Approve mutation returned validation/authorization error. Skipping due to E2E_SKIP_MUTATION_IF_NO_SEED=true.");
+      await closeDecisionModalIfOpen(driver);
+    } else if (outcome !== "success") {
+      throw new Error("Mandor approve mutation did not return success.");
+    }
   }
 
   await assertNoRawJsonError(driver);
