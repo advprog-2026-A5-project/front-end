@@ -10,6 +10,11 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
+  google: (idToken: string, role?: string) =>
+    request<SignInResponse>(`${base}/api/auth/google`, {
+      method: "POST",
+      body: JSON.stringify({ idToken, role }),
+    }),
   signOut: () => request<{ message: string }>(`${base}/api/auth/signout`, { method: "POST" }),
   me: (token: string) => request<AuthUser>(`${base}/api/users/me`, { token }),
   users: (token: string) => request<UserModel[]>(`${base}/api/users`, { token }),
