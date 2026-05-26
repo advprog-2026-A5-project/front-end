@@ -8,10 +8,10 @@ import type {
   UpahResponse,
   WalletResponse,
 } from "@/types/payment";
-// import { env } from "@/config/env";
+import { env } from "@/config/env";
 import { request } from "./httpClient";
 
-const base = "https://www.mysawit-payment.my.id";
+const base = env.paymentBaseUrl;
 
 const roleHeader = (role: Role) => ({ "X-User-Role": role });
 const userIdHeader = (userId: number) => ({ "X-User-Id": String(userId) });
