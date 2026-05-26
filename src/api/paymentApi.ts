@@ -3,6 +3,7 @@ import type {
   PayrollRequest,
   PayrollResponse,
   PayrollUpdateStatusRequest,
+  TopUpResponse,
   UpahRequest,
   UpahResponse,
   WalletResponse,
@@ -10,51 +11,51 @@ import type {
 // import { env } from "@/config/env";
 import { request } from "./httpClient";
 
-// TODO: ntar ditaro & setup ke env
-const base = "https://mysawit-payment-gateway-main-1069d73.d2.zuplo.dev";
+const base = "https://www.mysawit-payment.my.id";
 
 const roleHeader = (role: Role) => ({ "X-User-Role": role });
 const userIdHeader = (userId: number) => ({ "X-User-Id": String(userId) });
+const bearerHeader = (token: string) => ({ Authorization: `Bearer ${token}` });
 
 export const paymentApi = {
-  getPayrolls: (role: Role, userId: number) =>
+  getPayrolls: (role: Role, userId: number, token: string) =>
     request<PayrollResponse[]>(`${base}/api/payroll`, {
-      headers: { ...roleHeader(role), ...userIdHeader(userId) },
+      headers: { ...roleHeader(role), ...userIdHeader(userId), ...bearerHeader(token) },
     }),
-  getPayroll: (role: Role, userId: number, id: number) =>
+  getPayroll: (role: Role, userId: number, id: number, token: string) =>
     request<PayrollResponse>(`${base}/api/payroll/${id}`, {
-      headers: { ...roleHeader(role), ...userIdHeader(userId) },
+      headers: { ...roleHeader(role), ...userIdHeader(userId), ...bearerHeader(token) },
     }),
-  createPayroll: (role: Role, body: PayrollRequest) =>
+  createPayroll: (role: Role, body: PayrollRequest, token: string) =>
     request<PayrollResponse>(`${base}/api/payroll/create`, {
       method: "POST",
-      headers: roleHeader(role),
+      headers: { ...roleHeader(role), ...bearerHeader(token) },
       body: JSON.stringify(body),
     }),
-  updatePayrollStatus: (role: Role, body: PayrollUpdateStatusRequest) =>
+  updatePayrollStatus: (role: Role, body: PayrollUpdateStatusRequest, token: string) =>
     request<PayrollResponse>(`${base}/api/payroll/update`, {
       method: "PUT",
-      headers: roleHeader(role),
+      headers: { ...roleHeader(role), ...bearerHeader(token) },
       body: JSON.stringify(body),
     }),
-  getUpah: (role: Role) =>
+  getUpah: (role: Role, token: string) =>
     request<UpahResponse[]>(`${base}/api/upah`, {
-      headers: roleHeader(role),
+      headers: { ...roleHeader(role), ...bearerHeader(token) },
     }),
-  updateUpah: (role: Role, body: UpahRequest) =>
-    request<UpahResponse>(`${base}/api/upah`, {
+  updateUpah: (role: Role, body: UpahRequest, token: string) =>
+    request<UpahResponse>(`${base}/api/upah/update`, {
       method: "PUT",
-      headers: roleHeader(role),
+      headers: { ...roleHeader(role), ...bearerHeader(token) },
       body: JSON.stringify(body),
     }),
-  getWallet: (userId: number) =>
+  getWallet: (userId: number, token: string) =>
     request<WalletResponse>(`${base}/api/wallet/me`, {
-      headers: userIdHeader(userId),
+      headers: { ...userIdHeader(userId), ...bearerHeader(token) },
     }),
-  topUp: (role: Role, amount: number) =>
-    request<WalletResponse>(`${base}/api/wallet/topup`, {
+  topUp: (role: Role, amount: number, token: string) =>
+    request<TopUpResponse>(`${base}/api/wallet/topup`, {
       method: "POST",
-      headers: roleHeader(role),
+      headers: { ...roleHeader(role), ...bearerHeader(token) },
       body: JSON.stringify({ amount }),
     }),
 };
