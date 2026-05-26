@@ -39,3 +39,10 @@ export interface WalletResponse {
 export interface WalletTopUpRequest {
   amount: number;
 }
+
+export interface TopUpResponse {
+  xenditInvoiceId: string;
+  invoiceUrl: string;
+  amount: number;
+  status: string;
+}

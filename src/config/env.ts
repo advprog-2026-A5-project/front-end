@@ -1,39 +1,32 @@
-const isProduction = process.env.NODE_ENV === "production";
-const googleClientId = "386689511019-al4hcp7i2ddn95bg82m3ua1s2a7e00pn.apps.googleusercontent.com";
+const dev = process.env.NODE_ENV !== "production";
+const defaultGoogleClientId = "386689511019-al4hcp7i2ddn95bg82m3ua1s2a7e00pn.apps.googleusercontent.com";
 
-const readEnv = (key: string, fallback: string) => {
-  const value = process.env[key];
-  if (value && value.trim().length > 0) return value;
-  if (!isProduction) return fallback;
-  return "";
-};
+const pick = (literal: string | undefined, devFallback: string) =>
+  literal?.trim() || (dev ? devFallback : "");
 
-const readEnvNumber = (key: string, fallback: number) => {
-  const value = process.env[key];
-  if (value && value.trim().length > 0) {
-    const parsed = Number(value);
+const pickNumber = (literal: string | undefined, fallback: number) => {
+  if (literal?.trim()) {
+    const parsed = Number(literal);
     if (Number.isFinite(parsed) && parsed > 0) return parsed;
   }
   return fallback;
 };
 
 export const env = {
-  authBaseUrl: readEnv(
-    "NEXT_PUBLIC_AUTH_API_URL",
-    process.env.NEXT_PUBLIC_AUTH_API_BASE_URL ?? "http://localhost:8080",
+  authBaseUrl: pick(
+    process.env.NEXT_PUBLIC_AUTH_API_URL,
+    process.env.NEXT_PUBLIC_AUTH_API_BASE_URL ?? "",
   ),
-  kebunBaseUrl: readEnv(
-    "NEXT_PUBLIC_KEBUN_API_URL",
-    process.env.NEXT_PUBLIC_KEBUN_API_BASE_URL ?? "http://localhost:8081",
+  kebunBaseUrl: pick(
+    process.env.NEXT_PUBLIC_KEBUN_API_URL,
+    process.env.NEXT_PUBLIC_KEBUN_API_BASE_URL ?? "",
   ),
-  hasilPanenBaseUrl: readEnv(
-    "NEXT_PUBLIC_HASIL_PANEN_API_URL",
+  hasilPanenBaseUrl: pick(
+    process.env.NEXT_PUBLIC_HASIL_PANEN_API_URL,
     process.env.NEXT_PUBLIC_HASIL_PANEN_API_BASE_URL ?? "http://localhost:8082",
   ),
-  maxUploadSizeMb: readEnvNumber("NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB", 5),
-
-    pengirimanBaseUrl: readEnv("NEXT_PUBLIC_PENGIRIMAN_API_BASE_URL",
-        "http://localhost:8083"),
-    googleClientId: readEnv("NEXT_PUBLIC_GOOGLE_CLIENT_ID",
-        googleClientId),
+  maxUploadSizeMb: pickNumber(process.env.NEXT_PUBLIC_MAX_UPLOAD_SIZE_MB, 5),
+  paymentBaseUrl: pick(process.env.NEXT_PUBLIC_PAYMENT_API_URL, "http://localhost:8080"),
+  pengirimanBaseUrl: pick(process.env.NEXT_PUBLIC_PENGIRIMAN_API_BASE_URL, "http://localhost:8083"),
+  googleClientId: pick(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID, defaultGoogleClientId),
 };

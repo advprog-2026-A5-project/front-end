@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { paymentApi } from "@/api/paymentApi";
+import { useAuth } from "@/auth/AuthContext";
+import { AppShell } from "@/components/AppShell";
+import { AuthGuard } from "@/components/AuthGuard";
 import type {
   PayrollResponse,
   PayrollStatus,
+  TopUpResponse,
   UpahRole,
   WalletResponse,
 } from "@/types/payment";
@@ -21,13 +25,17 @@ const currency = new Intl.NumberFormat("id-ID", {
   maximumFractionDigits: 0,
 });
 
-const sawitDollarFormat = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
+const statusStyles: Record<PayrollStatus, string> = {
+  PENDING: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  ACCEPTED: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  REJECTED: "bg-red-500/15 text-red-300 border-red-500/30",
+};
 
-export default function UpahPage() {
-  const adminId = "100";
+export default function AdminPaymentPage() {
+  const { token, currentUser } = useAuth();
+  const adminIdNumber = currentUser?.id ?? 0;
+  const adminIdValid = Number.isFinite(adminIdNumber) && adminIdNumber > 0;
+
   const [draft, setDraft] = useState<Record<UpahRole, string>>({
     BURUH: "",
     MANDOR: "",
@@ -36,37 +44,43 @@ export default function UpahPage() {
   const [loadingUpah, setLoadingUpah] = useState(false);
   const [errorUpah, setErrorUpah] = useState<string | null>(null);
   const [savingRole, setSavingRole] = useState<UpahRole | null>(null);
+
   const [payrolls, setPayrolls] = useState<PayrollResponse[]>([]);
   const [loadingPayrolls, setLoadingPayrolls] = useState(false);
   const [errorPayrolls, setErrorPayrolls] = useState<string | null>(null);
   const [payrollActionId, setPayrollActionId] = useState<number | null>(null);
   const [rejectionNote, setRejectionNote] = useState<Record<number, string>>({});
+
+  const [filterStartDate, setFilterStartDate] = useState("");
+  const [filterEndDate, setFilterEndDate] = useState("");
+  const [filterStatus, setFilterStatus] = useState<PayrollStatus | "">("");
+
   const [wallet, setWallet] = useState<WalletResponse | null>(null);
   const [walletError, setWalletError] = useState<string | null>(null);
   const [topUpAmount, setTopUpAmount] = useState("");
   const [toppingUp, setToppingUp] = useState(false);
-
-  const adminIdNumber = Number(adminId);
-  const adminIdValid = Number.isFinite(adminIdNumber) && adminIdNumber > 0;
+  const [topUpInvoice, setTopUpInvoice] = useState<TopUpResponse | null>(null);
 
   const loadUpah = useCallback(async () => {
+    if (!token) return;
     setErrorUpah(null);
     setLoadingUpah(true);
     try {
-      const data = await paymentApi.getUpah("ADMIN");
+      const data = await paymentApi.getUpah("ADMIN", token);
       setDraft({
-        BURUH: String((data.find((item) => item.role === "BURUH")?.upahPerKg ?? 0) * 10000),
-        MANDOR: String((data.find((item) => item.role === "MANDOR")?.upahPerKg ?? 0) * 10000),
-        SUPIR: String((data.find((item) => item.role === "SUPIR")?.upahPerKg ?? 0) * 10000),
+        BURUH: String(data.find((item) => item.role === "BURUH")?.upahPerKg ?? 0),
+        MANDOR: String(data.find((item) => item.role === "MANDOR")?.upahPerKg ?? 0),
+        SUPIR: String(data.find((item) => item.role === "SUPIR")?.upahPerKg ?? 0),
       });
     } catch (e) {
       setErrorUpah(e instanceof Error ? e.message : "Failed to load upah");
     } finally {
       setLoadingUpah(false);
     }
-  }, []);
+  }, [token]);
 
   const loadPayrolls = useCallback(async () => {
+    if (!token) return;
     if (!adminIdValid) {
       setErrorPayrolls("Admin ID harus berupa angka positif");
       return;
@@ -74,7 +88,7 @@ export default function UpahPage() {
     setErrorPayrolls(null);
     setLoadingPayrolls(true);
     try {
-      const data = await paymentApi.getPayrolls("ADMIN", adminIdNumber);
+      const data = await paymentApi.getPayrolls("ADMIN", adminIdNumber, token);
       const sorted = [...data].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
       setPayrolls(sorted);
     } catch (e) {
@@ -82,21 +96,22 @@ export default function UpahPage() {
     } finally {
       setLoadingPayrolls(false);
     }
-  }, [adminIdNumber, adminIdValid]);
+  }, [adminIdNumber, adminIdValid, token]);
 
   const loadWallet = useCallback(async () => {
+    if (!token) return;
     if (!adminIdValid) {
       setWalletError("Admin ID harus berupa angka positif");
       return;
     }
     setWalletError(null);
     try {
-      const data = await paymentApi.getWallet(adminIdNumber);
+      const data = await paymentApi.getWallet(adminIdNumber, token);
       setWallet(data);
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : "Failed to load wallet");
     }
-  }, [adminIdNumber, adminIdValid]);
+  }, [adminIdNumber, adminIdValid, token]);
 
   const handleRefreshAll = useCallback(() => {
     void loadUpah();
@@ -111,22 +126,31 @@ export default function UpahPage() {
     return () => clearTimeout(timer);
   }, [handleRefreshAll]);
 
+  const filteredPayrolls = useMemo(() => {
+    return payrolls.filter((item) => {
+      if (filterStatus && item.status !== filterStatus) return false;
+      if (filterStartDate && item.createdAt < filterStartDate) return false;
+      if (filterEndDate && item.createdAt.slice(0, 10) > filterEndDate) return false;
+      return true;
+    });
+  }, [payrolls, filterStatus, filterStartDate, filterEndDate]);
+
   const handleChange = (role: UpahRole, value: string) => {
     setDraft((prev) => ({ ...prev, [role]: value }));
   };
 
   const handleSave = async (role: UpahRole) => {
+    if (!token) return;
     const valueRupiah = Number(draft[role]);
     if (!Number.isFinite(valueRupiah) || valueRupiah <= 0) {
       setErrorUpah("Upah harus berupa angka positif");
       return;
     }
-    const valueSawitDollar = valueRupiah / 10000;
     setErrorUpah(null);
     setSavingRole(role);
     try {
-      const updated = await paymentApi.updateUpah("ADMIN", { role, upahPerKg: valueSawitDollar });
-      setDraft((prev) => ({ ...prev, [role]: String(updated.upahPerKg * 10000) }));
+      const updated = await paymentApi.updateUpah("ADMIN", { role, upahPerKg: valueRupiah }, token);
+      setDraft((prev) => ({ ...prev, [role]: String(updated.upahPerKg) }));
     } catch (e) {
       setErrorUpah(e instanceof Error ? e.message : "Failed to update upah");
     } finally {
@@ -135,6 +159,7 @@ export default function UpahPage() {
   };
 
   const handlePayrollStatus = async (payrollId: number, status: PayrollStatus) => {
+    if (!token) return;
     if (!adminIdValid) {
       setErrorPayrolls("Admin ID harus berupa angka positif");
       return;
@@ -151,7 +176,7 @@ export default function UpahPage() {
         id: payrollId,
         status,
         alasanPenolakan: status === "REJECTED" ? note : "Approved",
-      });
+      }, token);
       setPayrolls((prev) => prev.map((item) => (item.id === payrollId ? updated : item)));
     } catch (e) {
       setErrorPayrolls(e instanceof Error ? e.message : "Failed to update payroll");
@@ -160,19 +185,29 @@ export default function UpahPage() {
     }
   };
 
+  const openTopUpPopup = (url: string) => {
+    const w = 520;
+    const h = 700;
+    const left = Math.max(0, window.screenX + (window.outerWidth - w) / 2);
+    const top = Math.max(0, window.screenY + (window.outerHeight - h) / 2);
+    window.open(url, "xendit-topup", `width=${w},height=${h},left=${left},top=${top},resizable=yes,scrollbars=yes`);
+  };
+
   const handleTopUp = async () => {
+    if (!token) return;
     const valueRupiah = Number(topUpAmount);
     if (!Number.isFinite(valueRupiah) || valueRupiah <= 0) {
       setWalletError("Nominal top up harus angka positif");
       return;
     }
-    const valueSawitDollar = valueRupiah / 10000;
     setWalletError(null);
+    setTopUpInvoice(null);
     setToppingUp(true);
     try {
-      const updated = await paymentApi.topUp("ADMIN", valueSawitDollar);
-      setWallet(updated);
+      const invoice = await paymentApi.topUp("ADMIN", valueRupiah, token);
+      setTopUpInvoice(invoice);
       setTopUpAmount("");
+      openTopUpPopup(invoice.invoiceUrl);
     } catch (e) {
       setWalletError(e instanceof Error ? e.message : "Top up gagal");
     } finally {
@@ -180,169 +215,203 @@ export default function UpahPage() {
     }
   };
 
-  const formatRupiah = (value: number) => currency.format(value);
-  const formatSawitDollar = (value: number) => `$${sawitDollarFormat.format(value)} Sawit Dolar`;
-
-  const statusStyles: Record<PayrollStatus, string> = {
-    PENDING: "bg-amber-100 text-amber-700 border-amber-200",
-    ACCEPTED: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    REJECTED: "bg-rose-100 text-rose-700 border-rose-200",
-  };
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f4f0e6] font-sans text-slate-900">
-      <div className="pointer-events-none absolute -left-32 top-16 h-72 w-72 rounded-full bg-[#f0c06a] opacity-40 blur-3xl" />
-      <div className="pointer-events-none absolute -right-24 top-24 h-80 w-80 rounded-full bg-[#4f8c6a] opacity-30 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-0 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#2f3d2e] opacity-20 blur-[120px]" />
-
-      <main className="relative mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
-        <section className="rounded-3xl border border-[#2f3d2e]/20 bg-white/80 p-8 shadow-[0_24px_60px_-30px_rgba(47,61,46,0.6)] backdrop-blur">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-sm uppercase tracking-[0.3em] text-[#4f8c6a]">Payment Module</p>
-              <h1 className="mt-3 text-3xl font-semibold text-[#2f3d2e] md:text-4xl">Admin Dashboard</h1>
-              <p className="mt-2 max-w-xl text-sm text-slate-600">
-                Halaman untuk admin mengatur upah, approval payroll, serta top up dan wallet.
-              </p>
+    <AuthGuard roles={["ADMIN"]}>
+      <AppShell>
+        <div className="space-y-6">
+          <section className="rounded-3xl border border-emerald-500/25 bg-slate-900/85 p-6 shadow-[0_20px_70px_-35px_rgba(16,185,129,0.35)]">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-100">Admin Dashboard</h2>
+                <p className="mt-2 text-sm text-slate-400">
+                  Kelola upah, approval payroll, dan top up wallet admin
+                </p>
+              </div>
+              <button
+                className="h-fit rounded-xl border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800 hover:text-white"
+                type="button"
+                onClick={handleRefreshAll}
+              >
+                Refresh
+              </button>
             </div>
-            <button
-              className="h-fit rounded-full border border-[#2f3d2e]/30 px-4 py-2 text-sm font-medium text-[#2f3d2e] transition hover:bg-[#2f3d2e] hover:text-white"
-              type="button"
-              onClick={handleRefreshAll}
-            >
-              Refresh
-            </button>
-          </div>
-        </section>
+          </section>
 
-        <section className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-          <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/85 p-8 shadow-[0_20px_50px_-30px_rgba(47,61,46,0.6)]">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[#2f3d2e]">Upah</h2>
-            </div>
+          <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
+            <section className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
+              <h3 className="text-lg font-semibold text-slate-100">Upah per Kg</h3>
 
-            {loadingUpah ? (
-              <p className="mt-6 text-sm text-slate-600">Memuat data upah...</p>
-            ) : (
-              <div className="mt-6 space-y-4">
-                {(["BURUH", "MANDOR", "SUPIR"] as UpahRole[]).map((role) => (
-                  <div
-                    key={role}
-                    className="rounded-2xl border border-[#2f3d2e]/10 bg-[#fdfbf7] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]"
-                  >
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                      <p className="text-sm font-semibold text-[#2f3d2e]">{roleLabel[role]}</p>
-                      <div className="flex flex-1 flex-col gap-3 md:flex-row md:items-center md:justify-end">
-                        <div className="relative w-full max-w-xs">
-                          <input
-                            className="w-full rounded-2xl border border-[#2f3d2e]/20 bg-white px-3 py-2 text-sm font-medium text-[#2f3d2e] shadow-sm outline-none transition focus:border-[#4f8c6a]"
-                            type="text"
-                            inputMode="decimal"
-                            value={draft[role]}
-                            onChange={(event) => handleChange(role, event.target.value)}
-                            placeholder="Upah per kg (Rp)"
-                          />
-                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">Rp</span>
-                        </div>
-                        <button
-                          className="rounded-2xl bg-[#2f3d2e] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1f2a1e] disabled:cursor-not-allowed disabled:opacity-60"
-                          type="button"
-                          onClick={() => handleSave(role)}
-                          disabled={savingRole === role}
-                        >
-                          {savingRole === role ? "Menyimpan..." : "Simpan"}
-                        </button>
+              {loadingUpah ? (
+                <p className="mt-4 text-sm text-slate-400">Memuat data upah...</p>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {(["BURUH", "MANDOR", "SUPIR"] as UpahRole[]).map((role) => (
+                    <div
+                      key={role}
+                      className="flex items-center gap-3 rounded-2xl border border-slate-700 bg-slate-950/50 px-4 py-3"
+                    >
+                      <p className="w-14 shrink-0 text-sm font-medium text-slate-200">{roleLabel[role]}</p>
+                      <div className="flex flex-1 items-center overflow-hidden rounded-lg border border-slate-600 bg-slate-900 focus-within:border-emerald-500 transition">
+                        <span className="shrink-0 border-r border-slate-600 px-3 text-xs text-slate-500">Rp</span>
+                        <input
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2 text-sm text-slate-100 outline-none"
+                          type="text"
+                          inputMode="decimal"
+                          value={draft[role]}
+                          onChange={(event) => handleChange(role, event.target.value)}
+                          placeholder="0"
+                        />
                       </div>
+                      <button
+                        className="shrink-0 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        type="button"
+                        onClick={() => handleSave(role)}
+                        disabled={savingRole === role}
+                      >
+                        {savingRole === role ? "Menyimpan..." : "Simpan"}
+                      </button>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
 
-            {errorUpah && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {errorUpah}
+              {errorUpah && (
+                <p className="mt-4 rounded border border-red-300/20 bg-red-500/10 p-2 text-sm text-red-300">
+                  {errorUpah}
+                </p>
+              )}
+            </section>
+
+            <section className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
+              <h3 className="text-lg font-semibold text-slate-100">Wallet Admin</h3>
+
+              <div className="mt-4 rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
+                <p className="text-xs uppercase tracking-widest text-slate-500">Saldo Saat Ini</p>
+                <p className="mt-2 text-2xl font-semibold text-emerald-300">
+                  {wallet ? currency.format(wallet.balance) : "—"}
+                </p>
               </div>
-            )}
+
+              <div className="mt-5">
+                <p className="text-xs font-medium uppercase tracking-widest text-slate-500">Top Up</p>
+                <div className="mt-2 flex flex-col gap-2">
+                  <input
+                    className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-emerald-500"
+                    placeholder="Nominal Rupiah"
+                    type="text"
+                    inputMode="decimal"
+                    value={topUpAmount}
+                    onChange={(event) => setTopUpAmount(event.target.value)}
+                  />
+                  <button
+                    className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
+                    type="button"
+                    onClick={handleTopUp}
+                    disabled={toppingUp}
+                  >
+                    {toppingUp ? "Memproses..." : "Top Up"}
+                  </button>
+                </div>
+              </div>
+
+              {topUpInvoice && (
+                <div className="mt-4 rounded border border-emerald-300/20 bg-emerald-500/10 p-3 text-sm text-emerald-200">
+                  <p className="font-medium">Invoice berhasil dibuat.</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-500"
+                      onClick={() => openTopUpPopup(topUpInvoice.invoiceUrl)}
+                    >
+                      Buka Pembayaran
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {walletError && (
+                <p className="mt-4 rounded border border-red-300/20 bg-red-500/10 p-2 text-sm text-red-300">
+                  {walletError}
+                </p>
+              )}
+            </section>
           </div>
 
-          <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/85 p-8 shadow-[0_20px_40px_-30px_rgba(47,61,46,0.6)]">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-[#2f3d2e]">Wallet Admin</h2>
-            </div>
+          <section className="rounded-3xl border border-slate-700 bg-slate-900/80 p-6">
+            <h3 className="text-lg font-semibold text-slate-100">Payroll</h3>
 
-            <div className="mt-5 rounded-2xl border border-[#2f3d2e]/10 bg-[#fdfbf7] p-5">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Saldo Saat Ini</p>
-              <p className="mt-2 text-2xl font-semibold text-[#2f3d2e]">
-                {wallet ? formatRupiah(wallet.balance * 10000) : "-"}
-              </p>
-              <p className="text-sm text-slate-500">{wallet ? formatSawitDollar(wallet.balance) : ""}</p>
-            </div>
-
-            <div className="mt-6">
-              <label className="text-xs uppercase tracking-[0.2em] text-slate-400">Top Up</label>
-              <div className="mt-3 flex flex-col gap-3">
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+              <label className="text-sm text-slate-300">
+                Dari Tanggal
                 <input
-                  className="w-full rounded-2xl border border-[#2f3d2e]/20 bg-white px-4 py-2 text-sm text-[#2f3d2e] outline-none"
-                  placeholder="Nominal Rupiah"
-                  type="text"
-                  inputMode="decimal"
-                  value={topUpAmount}
-                  onChange={(event) => setTopUpAmount(event.target.value)}
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-500"
+                  value={filterStartDate}
+                  onChange={(e) => setFilterStartDate(e.target.value)}
                 />
-                <button
-                  className="rounded-2xl bg-[#2f3d2e] px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                  type="button"
-                  onClick={handleTopUp}
-                  disabled={toppingUp}
+              </label>
+              <label className="text-sm text-slate-300">
+                Sampai Tanggal
+                <input
+                  type="date"
+                  className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-500"
+                  value={filterEndDate}
+                  onChange={(e) => setFilterEndDate(e.target.value)}
+                />
+              </label>
+              <label className="text-sm text-slate-300">
+                Status
+                <select
+                  className="mt-1 w-full rounded-xl border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none focus:border-emerald-500"
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value as PayrollStatus | "")}
                 >
-                  {toppingUp ? "Memproses..." : "Top Up"}
+                  <option value="">Semua</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="ACCEPTED">Accepted</option>
+                  <option value="REJECTED">Rejected</option>
+                </select>
+              </label>
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  className="w-full rounded-xl border border-slate-600 px-4 py-2 text-sm font-medium text-slate-300 transition hover:bg-slate-800"
+                  onClick={() => { setFilterStartDate(""); setFilterEndDate(""); setFilterStatus(""); }}
+                >
+                  Reset Filter
                 </button>
               </div>
             </div>
 
-            {walletError && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
-                {walletError}
-              </div>
-            )}
-          </div>
-        </section>
-
-        <section className="grid gap-6">
-          <div className="rounded-3xl border border-[#2f3d2e]/15 bg-white/90 p-8 shadow-[0_20px_50px_-30px_rgba(47,61,46,0.6)]">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <h2 className="text-xl font-semibold text-[#2f3d2e]">Payroll</h2>
-            </div>
-
             {loadingPayrolls ? (
-              <p className="mt-6 text-sm text-slate-600">Memuat payroll...</p>
-            ) : payrolls.length === 0 ? (
-              <p className="mt-6 text-sm text-slate-600">Belum ada payroll.</p>
+              <p className="mt-6 text-sm text-slate-400">Memuat payroll...</p>
+            ) : filteredPayrolls.length === 0 ? (
+              <p className="mt-6 text-sm text-slate-400">
+                {payrolls.length === 0 ? "Belum ada payroll." : "Tidak ada data yang cocok dengan filter."}
+              </p>
             ) : (
-              <div className="mt-6 space-y-4">
-                {payrolls.map((item) => (
-                  <div key={item.id} className="rounded-2xl border border-[#2f3d2e]/10 bg-white p-5">
+              <div className="mt-6 space-y-3">
+                {filteredPayrolls.map((item) => (
+                  <div key={item.id} className="rounded-2xl border border-slate-700 bg-slate-950/50 p-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                       <div>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <p className="text-sm font-semibold text-[#2f3d2e]">Payroll #{item.id}</p>
-                          <span
-                            className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusStyles[item.status]}`}
-                          >
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-100">Payroll #{item.id}</p>
+                          <span className={`rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusStyles[item.status]}`}>
                             {item.status}
                           </span>
                         </div>
-                        <p className="mt-2 text-sm text-slate-600">User ID: {item.userId}</p>
-                        <p className="text-sm text-slate-600">Amount: {formatRupiah(item.amount * 10000)}</p>
-                        <p className="text-xs text-slate-400">
+                        <p className="mt-1 text-sm text-slate-400">User ID: {item.userId}</p>
+                        <p className="text-sm text-slate-400">Amount: {currency.format(item.amount)}</p>
+                        <p className="text-xs text-slate-500">
                           {new Date(item.createdAt).toLocaleString("id-ID")}
                         </p>
                       </div>
+
                       {item.status === "PENDING" ? (
-                        <div className="flex w-full flex-col gap-3 md:w-auto">
+                        <div className="flex w-full flex-col gap-2 md:w-64">
                           <input
-                            className="w-full rounded-2xl border border-[#2f3d2e]/20 bg-white px-4 py-2 text-sm text-[#2f3d2e] outline-none"
+                            className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3 py-2 text-sm text-slate-100 outline-none transition focus:border-emerald-500"
                             placeholder="Alasan penolakan"
                             value={rejectionNote[item.id] ?? ""}
                             onChange={(event) =>
@@ -351,7 +420,7 @@ export default function UpahPage() {
                           />
                           <div className="flex gap-2">
                             <button
-                              className="flex-1 rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                              className="flex-1 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-emerald-500 disabled:opacity-50"
                               type="button"
                               onClick={() => handlePayrollStatus(item.id, "ACCEPTED")}
                               disabled={payrollActionId === item.id}
@@ -359,7 +428,7 @@ export default function UpahPage() {
                               Accept
                             </button>
                             <button
-                              className="flex-1 rounded-2xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                              className="flex-1 rounded-lg bg-red-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-600 disabled:opacity-50"
                               type="button"
                               onClick={() => handlePayrollStatus(item.id, "REJECTED")}
                               disabled={payrollActionId === item.id}
@@ -369,7 +438,7 @@ export default function UpahPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="text-sm text-slate-500">Status sudah final.</div>
+                        <p className="text-sm text-slate-500">Status sudah final.</p>
                       )}
                     </div>
                   </div>
@@ -378,13 +447,13 @@ export default function UpahPage() {
             )}
 
             {errorPayrolls && (
-              <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">
+              <p className="mt-4 rounded border border-red-300/20 bg-red-500/10 p-2 text-sm text-red-300">
                 {errorPayrolls}
-              </div>
+              </p>
             )}
-          </div>
-        </section>
-      </main>
-    </div>
+          </section>
+        </div>
+      </AppShell>
+    </AuthGuard>
   );
 }
